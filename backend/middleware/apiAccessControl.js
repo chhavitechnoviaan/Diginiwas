@@ -105,7 +105,7 @@ const PUBLIC_ROUTES = [
   ["POST", /^\/auth\/forgot-password\/?$/],
   ["POST", /^\/auth\/reset-password\/?$/],
 
-  ["POST", /^\/auths\/firebase-phone-login\/?$/],
+  // ["POST", /^\/auths\/firebase-phone-login\/?$/],
 
   ["POST", /^\/sellers\/auth\/(login|send-login-otp|login-with-otp)\/?$/],
   ["GET", /^\/properties(?:\/filter)?\/?$/],
