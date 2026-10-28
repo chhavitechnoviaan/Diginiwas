@@ -122,7 +122,7 @@ const findAccount = async ({ email, role }) => {
   return matches[0] || null;
 };
 
-// POST /api/auth/forgot-password
+// POST /api/v1/auth/forgot-password (also available under legacy /api)
 export const forgotPassword = async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -236,7 +236,7 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-// POST /api/auth/reset-password
+// POST /api/v1/auth/reset-password (also available under legacy /api)
 export const resetPassword = async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -364,9 +364,79 @@ export const resetPassword = async (req, res) => {
     });
   } catch (error) {
     console.error("RESET PASSWORD ERROR:", error);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       success: false,
       message: error.message || "Unable to reset password",
     });
+  }
+};
+
+
+// PATCH /api/v1/auth/change-password - shared Buyer / Seller / Partner endpoint
+export const changeBuyerPassword = async (req, res) => {
+  try {
+    const role = normalizeRole(req.user?.role);
+    const userId = req.user?.id || req.user?._id || req.user?.userId;
+    const Model = getModel(role);
+
+    if (!Model || !userId) {
+      return res.status(403).json({
+        success: false,
+        message: "This endpoint is for authenticated Buyer, Seller, or Partner accounts only.",
+      });
+    }
+
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "currentPassword and newPassword are required.",
+      });
+    }
+    if (String(newPassword).length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be at least 8 characters long.",
+      });
+    }
+
+    const user = await Model.findById(userId).select("+password");
+    if (!user || user.isDeleted) {
+      return res.status(404).json({ success: false, message: "Account not found." });
+    }
+    if (!user.password || !(await bcrypt.compare(String(currentPassword), user.password))) {
+      return res.status(400).json({ success: false, message: "Current password is incorrect." });
+    }
+
+    if (role === "partner") {
+      user.password = await hashPassword(String(newPassword));
+      user.credentials = user.credentials || {};
+      user.credentials.mustChangePassword = false;
+      user.credentials.passwordChangedAt = new Date();
+      user.credentials.temporaryPasswordExpiresAt = null;
+    } else {
+      user.password = await bcrypt.hash(String(newPassword), 12);
+      if (role === "seller") {
+        user.mustChangePassword = false;
+        user.lastPasswordChangedAt = new Date();
+        if (Array.isArray(user.verificationHistory)) {
+          user.verificationHistory.push({
+            action: "PASSWORD_CHANGED",
+            remarks: "Password changed by account holder",
+            updatedBy: { userId: user._id, name: user.name, role: "User" },
+          });
+        }
+      }
+    }
+
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully.",
+      data: { role, email: user.email },
+    });
+  } catch (error) {
+    console.error("Shared change password error:", error);
+    return res.status(500).json({ success: false, message: "Unable to change password." });
   }
 };

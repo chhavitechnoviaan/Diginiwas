@@ -1,25 +1,49 @@
-import { getApp, getApps, initializeApp } from "firebase/app";
+// import { getApps, initializeApp } from "firebase/app";
+// import { getAuth } from "firebase/auth";
+
+// const firebaseConfig = {
+//   apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.trim(),
+//   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim(),
+//   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim(),
+//   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim(),
+//   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim(),
+//   appId: import.meta.env.VITE_FIREBASE_APP_ID?.trim(),
+// };
+
+// const requiredFirebaseConfig = ["apiKey", "authDomain", "projectId", "appId"];
+// const missing = requiredFirebaseConfig.filter((key) => !firebaseConfig[key]);
+
+// if (missing.length) {
+//   // Do not print API key values or other configuration secrets to the console.
+//   console.error(`[Firebase] Missing required VITE_FIREBASE_* configuration: ${missing.join(", ")}`);
+// }
+
+// const existingDefaultApp = getApps().find((item) => item.name === "[DEFAULT]");
+// const app = existingDefaultApp || initializeApp(firebaseConfig);
+
+// export const firebaseAuth = getAuth(app);
+
+import { getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.trim(),
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim(),
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim(),
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim(),
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim(),
+  appId: import.meta.env.VITE_FIREBASE_APP_ID?.trim(),
 };
 
-const missing = Object.entries(firebaseConfig)
-  .filter(([, value]) => !value)
-  .map(([key]) => key);
+const requiredFirebaseConfig = ["apiKey", "authDomain", "projectId", "appId"];
+const missing = requiredFirebaseConfig.filter((key) => !firebaseConfig[key]);
 
 if (missing.length) {
-  console.warn(
-    `[Firebase] Missing config values: ${missing.join(", ")}`
-  );
+  // Do not print API key values or other configuration secrets to the console.
+  console.error(`[Firebase] Missing required VITE_FIREBASE_* configuration: ${missing.join(", ")}`);
 }
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const existingDefaultApp = getApps().find((item) => item.name === "[DEFAULT]");
+const app = existingDefaultApp || initializeApp(firebaseConfig);
 
 export const firebaseAuth = getAuth(app);

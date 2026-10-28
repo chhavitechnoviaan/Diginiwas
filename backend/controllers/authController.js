@@ -1,304 +1,9 @@
-// import authService from "../services/authService.js";
-// import Buyer from "../models/Buyer.js";
-// import Seller from "../models/Seller.js";
-// import Partner from "../models/Partner.js";
-// import bcrypt from "bcryptjs";
-// import jwt from "jsonwebtoken";
-// import { firebaseAdminAuth } from "../config_firebaseAdmin.js";
-
-// const isBuyerRole = (role) =>
-//   ["buyer", "tenant"].includes(String(role || "").trim().toLowerCase());
-
-// const isSupportedLoginRole = (role) =>
-//   ["buyer", "tenant", "seller", "owner", "partner"].includes(
-//     String(role || "").trim().toLowerCase()
-//   );
-
-// export const register = async (req, res) => {
-//   try {
-//     const { name, email, phone, password, role, location, partnerType } = req.body;
-
-//     if (!name || !email || !phone || !password || !role) {
-//       return res.status(400).json({ success: false, message: "All fields are required" });
-//     }
-
-//     if (!isBuyerRole(role)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "This endpoint supports buyer/tenant registration only. Use the dedicated seller or partner application API.",
-//       });
-//     }
-
-//     const user = await authService.registerUser({
-//       name, email, phone, password, role, location, partnerType,
-//     });
-
-//     return res.status(201).json({
-//       success: true,
-//       message: "Registration successful",
-//       data: {
-//         id: user._id,
-//         sellerId: user.sellerId || null,
-//         partnerId: user.partnerId || null,
-//         name: user.name,
-//         email: user.email,
-//         phone: user.phone,
-//         role: user.role,
-//         partnerType: user.partnerType || null,
-//         location: user.location || null,
-//       },
-//     });
-//   } catch (error) {
-//     return res.status(400).json({ success: false, message: error.message });
-//   }
-// };
-
-// export const loginWithPassword = async (req, res) => {
-//   try {
-//     const { phone, password, role } = req.body;
-
-//     if (!phone || !password || !role) {
-//       return res.status(400).json({ success: false, message: "Phone, password and role are required" });
-//     }
-
-//     if (!isBuyerRole(role)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "This endpoint supports buyer/tenant login only. Use the dedicated seller or partner login API.",
-//       });
-//     }
-
-//     const { user, token } = await authService.loginWithPassword({ phone, password, role });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Login successful",
-//       token,
-//       data: {
-//         id: user._id,
-//         sellerId: user.sellerId || null,
-//         partnerId: user.partnerId || null,
-//         name: user.name,
-//         phone: user.phone,
-//         role: user.role,
-//         partnerType: user.partnerType || null,
-//         location: user.location || null,
-//       },
-//     });
-//   } catch (error) {
-//     return res.status(401).json({ success: false, message: error.message });
-//   }
-// };
-
-// // Send OTP to the registered phone number. Works for Buyer, Seller and Partner.
-// export const sendOTP = async (req, res) => {
-//   try {
-//     const { phone, role } = req.body || {};
-
-//     if (!phone || !role) {
-//       return res.status(400).json({ success: false, message: "Phone number and role are required" });
-//     }
-
-//     if (!isSupportedLoginRole(role)) {
-//       return res.status(400).json({ success: false, message: "Role must be buyer, seller, or partner" });
-//     }
-
-//     const result = await authService.sendOTP({ phone, role });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "OTP sent successfully to your registered mobile number",
-//       data: result,
-//     });
-//   } catch (error) {
-//     const status = error.code === "ACCOUNT_DELETED" ? 403 : 400;
-//     return res.status(status).json({
-//       success: false,
-//       code: error.code || "OTP_SEND_FAILED",
-//       message: error.message,
-//     });
-//   }
-// };
-
-// // Resend OTP through the same Twilio Verify service.
-// export const resendOTP = async (req, res) => {
-//   return sendOTP(req, res);
-// };
-
-
-// // Firebase Phone Authentication -> DigiNiwas Buyer session.
-// // Firebase verifies the SMS OTP on the client. The ID token is then verified
-// // server-side before a normal DigiNiwas JWT is issued.
-// export const loginWithFirebasePhone = async (req, res) => {
-//   try {
-//     const { idToken, role = "buyer" } = req.body || {};
-
-//     if (!idToken) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Firebase ID token is required.",
-//       });
-//     }
-
-//     if (!isBuyerRole(role)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "This Firebase OTP login is available for buyers only.",
-//       });
-//     }
-
-//     const decoded = await firebaseAdminAuth().verifyIdToken(idToken, true);
-//     const firebaseUid = decoded.uid;
-//     const firebasePhone = String(decoded.phone_number || "").trim();
-
-//     if (!firebasePhone) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "A verified Firebase phone number is required.",
-//       });
-//     }
-
-//     const digits = firebasePhone.replace(/\D/g, "");
-//     const localPhone = digits.replace(/^91/, "");
-//     const phoneCandidates = [
-//       firebasePhone,
-//       localPhone,
-//       `+91${localPhone}`,
-//     ].filter(Boolean);
-
-//     let buyer =
-//       (await Buyer.findOne({ firebaseUid })) ||
-//       (await Buyer.findOne({ phone: { $in: [...new Set(phoneCandidates)] } }));
-
-//     if (buyer?.isDeleted) {
-//       const error = new Error("This account has been deleted.");
-//       error.code = "ACCOUNT_DELETED";
-//       throw error;
-//     }
-
-//     if (buyer && buyer.status && buyer.status !== "Active") {
-//       return res.status(403).json({
-//         success: false,
-//         message: `Buyer account is ${buyer.status}.`,
-//       });
-//     }
-
-//     if (!buyer) {
-//       const randomPassword = `${firebaseUid}-${Date.now()}-${Math.random()}`;
-//       const password = await bcrypt.hash(randomPassword, 10);
-
-//       buyer = await Buyer.create({
-//         firebaseUid,
-//         name: decoded.name || "DigiNiwas Buyer",
-//         email: decoded.email || `${localPhone}@buyer.diginiwas.local`,
-//         phone: firebasePhone,
-//         password,
-//         role: "buyer",
-//         status: "Active",
-//         isPhoneVerified: true,
-//         avatar: decoded.picture || "",
-//       });
-//     } else {
-//       buyer.firebaseUid = firebaseUid;
-//       buyer.phone = firebasePhone;
-//       buyer.isPhoneVerified = true;
-//       buyer.lastLoginAt = new Date();
-//       await buyer.save();
-//     }
-
-//     const token = jwt.sign(
-//       {
-//         userId: buyer._id,
-//         id: buyer._id,
-//         role: "buyer",
-//       },
-//       process.env.JWT_SECRET || "secretKey",
-//       { expiresIn: "7d" }
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Firebase OTP verified. Buyer login successful.",
-//       token,
-//       data: {
-//         id: buyer._id,
-//         buyerId: buyer.buyerId || null,
-//         name: buyer.name,
-//         email: buyer.email || null,
-//         phone: buyer.phone,
-//         role: "buyer",
-//         location: buyer.location || null,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Firebase Buyer OTP Login Error:", error);
-
-//     const status = error.code === "ACCOUNT_DELETED" ? 403 : 401;
-//     return res.status(status).json({
-//       success: false,
-//       code: error.code || "FIREBASE_OTP_LOGIN_FAILED",
-//       message:
-//         error.code === "auth/id-token-expired"
-//           ? "Firebase session expired. Please request OTP again."
-//           : error.message || "Unable to verify Firebase OTP.",
-//     });
-//   }
-// };
-
-// // Verify Twilio OTP and issue JWT.
-// export const loginWithOTP = async (req, res) => {
-//   try {
-//     const { phone, otp, role } = req.body || {};
-
-//     if (!phone || !otp || !role) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Phone number, OTP, and role are required",
-//       });
-//     }
-
-//     if (!isSupportedLoginRole(role)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Role must be buyer, seller, or partner",
-//       });
-//     }
-
-//     const { user, token } = await authService.loginWithOTP({ phone, otp, role });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "OTP verified. Login successful",
-//       token,
-//       data: {
-//         id: user._id,
-//         sellerId: user.sellerId || null,
-//         partnerId: user.partnerId || null,
-//         name: user.name,
-//         email: user.email || null,
-//         phone: user.phone,
-//         role: user.role,
-//         partnerType: user.partnerType || null,
-//         location: user.location || null,
-//       },
-//     });
-//   } catch (error) {
-//     const status = error.code === "ACCOUNT_DELETED" ? 403 : 401;
-//     return res.status(status).json({
-//       success: false,
-//       code: error.code || "OTP_LOGIN_FAILED",
-//       message: error.message,
-//     });
-//   }
-// };
-
 import authService from "../services/authService.js";
 import Buyer from "../models/Buyer.js";
 import Seller from "../models/Seller.js";
 import Partner from "../models/Partner.js";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { firebaseAdminAuth } from "../config_firebaseAdmin.js";
+import { normalizePhone, phoneCandidates, verifyFirebasePhoneIdToken, assertSamePhone } from "../utils/firebasePhoneAuth.js";
 
 const isBuyerRole = (role) =>
   ["buyer", "tenant"].includes(
@@ -483,6 +188,32 @@ export const resendOTP = async (req, res) => {
 // Buyer + Seller + Partner
 // ============================================================
 
+export const checkFirebasePhoneAccount = async (req, res) => {
+  try {
+    const role = String(req.body?.role || "buyer").trim().toLowerCase();
+    const phone = normalizePhone(req.body?.phone);
+    if (!phone) return res.status(400).json({ success: false, message: "Phone number is required." });
+    if (!isFirebaseLoginRole(role)) return res.status(400).json({ success: false, message: "Role must be buyer, seller, or partner." });
+    const candidates = phoneCandidates(phone);
+    let account = null;
+    if (role === "buyer") account = await Buyer.findOne({ phone: { $in: candidates } });
+    if (role === "seller") account = await Seller.findOne({ phone: { $in: candidates } });
+    if (role === "partner") account = await Partner.findOne({ phone: { $in: candidates } });
+    if (!account || account.isDeleted) {
+      return res.status(404).json({ success: false, code: "ACCOUNT_NOT_FOUND", accountExists: false, message: "No account exists with this number. Please register." });
+    }
+    const status = role === "seller"
+      ? String(account.accountStatus || "PENDING").toUpperCase()
+      : role === "partner"
+        ? (account.isBlocked ? "BLOCKED" : account.isRejected ? "REJECTED" : (account.isApproved && account.isVerified ? "ACTIVE" : String(account.applicationStatus || "PENDING").toUpperCase()))
+        : String(account.status || "ACTIVE").toUpperCase();
+    return res.status(200).json({ success: true, accountExists: true, role, phone, accountStatus: status, canLogin: role === "buyer" ? status === "ACTIVE" : status === "ACTIVE", message: status === "ACTIVE" ? "Account exists. You can continue with Firebase phone verification." : `Account exists but is not active (${status}).` });
+  } catch (error) {
+    console.error("Firebase account check error:", error);
+    return res.status(500).json({ success: false, message: "Unable to check account right now." });
+  }
+};
+
 export const loginWithFirebasePhone = async (req, res) => {
   try {
     const {
@@ -521,44 +252,8 @@ export const loginWithFirebasePhone = async (req, res) => {
     // 3. Verify Firebase ID Token
     // --------------------------------------------------------
 
-    const decoded =
-      await firebaseAdminAuth().verifyIdToken(
-        idToken,
-        true
-      );
-
-    const firebaseUid = decoded.uid;
-
-    const firebasePhone = String(
-      decoded.phone_number || ""
-    ).trim();
-
-    if (!firebasePhone) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "A verified Firebase phone number is required.",
-      });
-    }
-
-    // --------------------------------------------------------
-    // 4. Normalize Phone Number
-    // --------------------------------------------------------
-
-    const digits = firebasePhone.replace(/\D/g, "");
-
-    const localPhone = digits.replace(/^91/, "");
-
-    const phoneCandidates = [
-      firebasePhone,
-      digits,
-      localPhone,
-      `+91${localPhone}`,
-    ].filter(Boolean);
-
-    const uniquePhoneCandidates = [
-      ...new Set(phoneCandidates),
-    ];
+    const { decoded, phone: firebasePhone, uid: firebaseUid } = await verifyFirebasePhoneIdToken(idToken);
+    const uniquePhoneCandidates = phoneCandidates(firebasePhone);
 
     // --------------------------------------------------------
     // 5. BUYER LOGIN
@@ -597,57 +292,22 @@ export const loginWithFirebasePhone = async (req, res) => {
         });
       }
 
-      // ------------------------------------------------------
-      // Create buyer if account doesn't exist
-      // ------------------------------------------------------
-
+      // Login is strictly for existing accounts. Never auto-create a Buyer here.
       if (!buyer) {
-        const randomPassword =
-          `${firebaseUid}-${Date.now()}-${Math.random()}`;
-
-        const password =
-          await bcrypt.hash(
-            randomPassword,
-            10
-          );
-
-        buyer = await Buyer.create({
-          firebaseUid,
-
-          name:
-            decoded.name ||
-            "DigiNiwas Buyer",
-
-          email:
-            decoded.email ||
-            `${localPhone}@buyer.diginiwas.local`,
-
-          phone: firebasePhone,
-
-          password,
-
-          role: "buyer",
-
-          status: "Active",
-
-          isPhoneVerified: true,
-
-          avatar:
-            decoded.picture || "",
-
-          lastLoginAt: new Date(),
+        return res.status(404).json({
+          success: false,
+          code: "ACCOUNT_NOT_FOUND",
+          accountExists: false,
+          message: "No account exists with this number. Please register.",
         });
-      } else {
-        buyer.firebaseUid = firebaseUid;
-
-        buyer.phone = firebasePhone;
-
-        buyer.isPhoneVerified = true;
-
-        buyer.lastLoginAt = new Date();
-
-        await buyer.save();
       }
+      assertSamePhone(buyer.phone, firebasePhone);
+
+      buyer.firebaseUid = firebaseUid;
+      buyer.phone = firebasePhone;
+      buyer.isPhoneVerified = true;
+      buyer.lastLoginAt = new Date();
+      await buyer.save();
 
       // ------------------------------------------------------
       // Buyer JWT
@@ -720,9 +380,11 @@ export const loginWithFirebasePhone = async (req, res) => {
           success: false,
           code: "SELLER_NOT_FOUND",
           message:
-            "No seller account found with this phone number. Please register as a seller first.",
+            "No account exists with this number. Please register as a seller first.",
         });
       }
+
+      assertSamePhone(seller.phone, firebasePhone);
 
       // Deleted seller
       if (seller.isDeleted) {
@@ -838,9 +500,11 @@ export const loginWithFirebasePhone = async (req, res) => {
           success: false,
           code: "PARTNER_NOT_FOUND",
           message:
-            "No partner account found with this phone number. Please register as a partner first.",
+            "No account exists with this number. Please register as a partner first.",
         });
       }
+
+      assertSamePhone(partner.phone, firebasePhone);
 
       // Deleted partner
       if (partner.isDeleted) {
@@ -869,6 +533,15 @@ export const loginWithFirebasePhone = async (req, res) => {
           code: "PARTNER_REJECTED",
           message:
             "Your partner account has been rejected.",
+        });
+      }
+
+      // Partner must be approved and verified before login.
+      if (!partner.isApproved || !partner.isVerified) {
+        return res.status(403).json({
+          success: false,
+          code: "PARTNER_ACCOUNT_NOT_ACTIVE",
+          message: "Partner account is pending approval/verification.",
         });
       }
 

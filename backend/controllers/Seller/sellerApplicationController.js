@@ -19,10 +19,7 @@ import {
   sendSellerApprovalCredentials,
   sendSellerApplicationRejectedEmail,
 } from "../../services/selleremailService.js";
-import {
-  sendLoginOtp,
-  verifyLoginOtp,
-} from "../../services/twilioVerifyService.js";
+import { verifyFirebasePhoneIdToken, assertSamePhone } from "../../utils/firebasePhoneAuth.js";
 
 const publicSellerSelect =
   "-password -emailVerification.otpHash -emailVerification.otpExpiresAt -phoneVerification.otpHash -phoneVerification.otpExpiresAt";
@@ -393,24 +390,18 @@ export const verifySellerEmailOtp = async (
       "Email address verified"
     );
 
-    await sendLoginOtp(seller.phone);
-
-    pushHistory(
-      seller,
-      "PHONE_OTP_SENT",
-      "Phone verification OTP sent through Twilio Verify"
-    );
-
+    pushHistory(seller, "PHONE_OTP_SENT", "Firebase phone OTP must be sent by the client Firebase SDK after email verification");
     await seller.save();
 
     return res.status(200).json({
       success: true,
-      message:
-        "Email verified. Phone OTP sent.",
+      message: "Email verified. Now send the phone OTP using Firebase Phone Authentication on the client.",
       data: {
         applicationId: seller._id,
-        applicationStatus:
-          seller.applicationStatus,
+        applicationStatus: seller.applicationStatus,
+        phone: seller.phone,
+        phoneOtpProvider: "firebase",
+        action: "sendFirebasePhoneOtp",
       },
     });
   } catch (error) {
@@ -432,26 +423,19 @@ export const verifySellerEmailOtp = async (
 // ======================================================
 export const verifySellerPhoneOtp = async (req, res) => {
   try {
-    const { applicationId, otp } = req.body || {};
-
-    if (!applicationId || !otp) {
-      return res.status(400).json({ success: false, message: "Application ID and OTP are required" });
+    const { applicationId, idToken } = req.body || {};
+    if (!applicationId || !idToken) {
+      return res.status(400).json({ success: false, message: "Application ID and Firebase ID token are required." });
     }
-
     const seller = await Seller.findById(applicationId);
-    if (!seller) {
-      return res.status(404).json({ success: false, message: "Seller application not found" });
-    }
+    if (!seller) return res.status(404).json({ success: false, message: "Seller application not found" });
+    if (!seller.emailVerification?.isVerified) return res.status(400).json({ success: false, message: "Email must be verified first" });
+    if (seller.phoneVerification?.isVerified) return res.status(200).json({ success: true, message: "Phone already verified", data: { applicationId: seller._id, isPhoneVerified: true } });
 
-    if (!seller.emailVerification.isVerified) {
-      return res.status(400).json({ success: false, message: "Email must be verified first" });
-    }
-
-    const twilioResult = await verifyLoginOtp(seller.phone, otp);
-    if (!twilioResult.success) {
-      return res.status(400).json({ success: false, message: "Invalid or expired phone OTP" });
-    }
-
+    const { phone, uid } = await verifyFirebasePhoneIdToken(idToken);
+    assertSamePhone(seller.phone, phone);
+    seller.firebaseUid = uid;
+    seller.phone = phone;
     seller.phoneVerification.isVerified = true;
     seller.phoneVerification.verifiedAt = new Date();
     seller.phoneVerification.otpHash = null;
@@ -467,41 +451,25 @@ export const verifySellerPhoneOtp = async (req, res) => {
     seller.approvedAt = new Date();
     seller.approvedBy = { userId: null, name: "System", role: "System" };
     seller.mustChangePassword = true;
-
-    pushHistory(seller, "PHONE_VERIFIED", "Phone number verified through Twilio Verify");
-    pushHistory(seller, "APPROVED", "Seller account activated automatically after email and phone verification");
+    pushHistory(seller, "PHONE_VERIFIED", "Phone verified through Firebase Phone Authentication");
+    pushHistory(seller, "APPROVED", "Seller account activated after email and Firebase phone verification");
     await seller.save();
 
     let credentialsEmailSent = true;
     try {
-      await sendSellerApprovalCredentials({
-        to: seller.email,
-        name: seller.name,
-        sellerId: seller.sellerId,
-        temporaryPassword,
-      });
+      await sendSellerApprovalCredentials({ to: seller.email, name: seller.name, sellerId: seller.sellerId, temporaryPassword });
     } catch (emailError) {
       credentialsEmailSent = false;
       console.error("SELLER CREDENTIAL EMAIL ERROR:", emailError);
     }
-
     return res.status(200).json({
       success: true,
-      message: credentialsEmailSent
-        ? "Phone verified. Seller account created and login credentials sent by email."
-        : "Phone verified and seller account created, but the credentials email could not be sent. Please contact support.",
-      data: {
-        applicationId: seller._id,
-        sellerId: seller.sellerId,
-        applicationStatus: seller.applicationStatus,
-        accountStatus: seller.accountStatus,
-        mustChangePassword: seller.mustChangePassword,
-        credentialsEmailSent,
-      },
+      message: credentialsEmailSent ? "Firebase phone verified. Seller account activated and credentials email sent." : "Phone verified and seller account activated, but credentials email could not be sent.",
+      data: { applicationId: seller._id, sellerId: seller.sellerId, applicationStatus: seller.applicationStatus, accountStatus: seller.accountStatus, mustChangePassword: seller.mustChangePassword, credentialsEmailSent, firebaseUid: uid },
     });
   } catch (error) {
-    console.error("Verify Seller Phone OTP Error:", error);
-    return res.status(500).json({ success: false, message: error?.message || "Unable to verify phone OTP" });
+    console.error("Verify Seller Firebase Phone Error:", error);
+    return res.status(error.statusCode || 400).json({ success: false, code: error.code || "FIREBASE_PHONE_VERIFICATION_FAILED", message: error.message || "Unable to verify Firebase phone token" });
   }
 };
 
@@ -571,23 +539,6 @@ export const resendSellerEmailOtp = async (
 // PUBLIC - RESEND PHONE OTP
 // POST /api/sellers/applications/resend-phone-otp
 // ======================================================
-export const resendSellerPhoneOtp = async (req, res) => {
-  try {
-    const { applicationId } = req.body || {};
-    const seller = await Seller.findById(applicationId);
-    if (!seller) return res.status(404).json({ success: false, message: "Application not found" });
-    if (!seller.emailVerification.isVerified) return res.status(400).json({ success: false, message: "Verify email before phone verification" });
-    if (seller.phoneVerification.isVerified) return res.status(400).json({ success: false, message: "Phone is already verified" });
-    await sendLoginOtp(seller.phone);
-    pushHistory(seller, "PHONE_OTP_SENT", "Phone OTP resent through Twilio Verify");
-    await seller.save();
-    return res.json({ success: true, message: "Phone OTP resent", data: { applicationId: seller._id, phone: seller.phone, expiresIn: "10 minutes", channel: "sms", provider: "twilio" } });
-  } catch (error) {
-    console.error("RESEND SELLER PHONE OTP ERROR:", error);
-    return res.status(500).json({ success: false, message: error?.message || "Unable to resend phone OTP" });
-  }
-};
-
 // ======================================================
 // ADMIN - LIST APPLICATIONS
 // GET /api/sellers/applications

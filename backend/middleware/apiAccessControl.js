@@ -93,7 +93,10 @@ const PUBLIC_ROUTES = [
   ["POST", /^\/partner-applications\/[^/]+\/resend-otp\/?$/],
   ["PATCH", /^\/partner-applications\/[^/]+\/(verify-email|verify-phone)\/?$/],
   ["POST", /^\/sellers\/applications\/(register|verify-email|verify-phone|resend-email-otp|resend-phone-otp)\/?$/],
-
+[
+  "POST",
+  /^\/auths\/firebase-phone-login\/check-account\/?$/
+],
   // Password reset - PUBLIC, JWT not required
   ["POST", /^\/auth\/forgot-password\/?$/],
   ["POST", /^\/auth\/reset-password\/?$/],

@@ -12,7 +12,6 @@ import {
   verifySellerEmailOtp,
   verifySellerPhoneOtp,
   resendSellerEmailOtp,
-  resendSellerPhoneOtp,
 } from "../../controllers/Seller/sellerApplicationController.js";
 import {
   sellerLogin,
@@ -49,11 +48,6 @@ router.post(
 router.post(
   "/applications/resend-email-otp",
   resendSellerEmailOtp
-);
-
-router.post(
-  "/applications/resend-phone-otp",
-  resendSellerPhoneOtp
 );
 
 // ======================================================

@@ -6,6 +6,7 @@ import {
   resendOTP,
   loginWithOTP,
   loginWithFirebasePhone,
+  checkFirebasePhoneAccount,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.post("/login-password", loginWithPassword);
 router.post("/send-otp", sendOTP);
 router.post("/resend-otp", resendOTP);
 router.post("/login-otp", loginWithOTP);
+router.post("/firebase-phone-login/check-account", checkFirebasePhoneAccount);
 router.post("/firebase-phone-login", loginWithFirebasePhone);
 
 // Explicit aliases for new frontend integration

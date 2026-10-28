@@ -515,10 +515,7 @@ import {
   sendEmailOtp,
   sendPartnerCredentials,
 } from "../../services/partnerNotificationService.js";
-import {
-  sendLoginOtp,
-  verifyLoginOtp,
-} from "../../services/twilioVerifyService.js";
+import { verifyFirebasePhoneIdToken, assertSamePhone } from "../../utils/firebasePhoneAuth.js";
 import { notifyAdmins } from "../../services/adminNotificationService.js";
 
 const generatePartnerId = () =>
@@ -824,20 +821,7 @@ export const registerPartnerApplication =
             ],
         });
 
-      await Promise.all([
-        sendEmailOtp({
-          to:
-            partner.email,
-
-          name:
-            partner.name,
-
-          otp:
-            emailOtp,
-        }),
-
-        sendLoginOtp(partner.phone),
-      ]);
+      await sendEmailOtp({ to: partner.email, name: partner.name, otp: emailOtp });
 
       await notifyAdmins({
         title: "New partner application",
@@ -855,12 +839,13 @@ export const registerPartnerApplication =
           success: true,
 
           message:
-            "Application created. Verify email and mobile OTP.",
+            "Application created. Verify email, then send/verify phone OTP using Firebase Phone Authentication on the client.",
 
-          data:
-            sanitize(
-              partner
-            ),
+          data: {
+            ...sanitize(partner),
+            phoneOtpProvider: "firebase",
+            phoneOtpAction: "sendFirebasePhoneOtp",
+          },
         });
     } catch (error) {
       console.error(
@@ -955,10 +940,11 @@ export const resendPartnerOtp =
           otp,
         });
       } else if (channel === "phone") {
-        if (partner.phoneVerification?.isVerified) {
-          return res.status(400).json({ success: false, message: "Mobile is already verified" });
-        }
-        await sendLoginOtp(partner.phone);
+        return res.status(400).json({
+          success: false,
+          code: "FIREBASE_PHONE_RESEND_DISABLED",
+          message: "Phone OTP resend is not supported by this endpoint. Use Firebase Phone Authentication in the frontend during phone verification.",
+        });
       } else {
         return res
           .status(400)
@@ -1142,18 +1128,23 @@ export const verifyPartnerPhoneOtp = async (req, res) => {
     const partner = await Partner.findById(req.params.id);
     if (!partner) return res.status(404).json({ success: false, message: "Application not found" });
     if (partner.phoneVerification?.isVerified) return res.json({ success: true, message: "Mobile already verified", data: sanitize(partner) });
-    const twilioResult = await verifyLoginOtp(partner.phone, req.body?.otp);
-    if (!twilioResult.success) return res.status(400).json({ success: false, message: "Invalid or expired mobile OTP" });
+    const { idToken } = req.body || {};
+    if (!idToken) return res.status(400).json({ success: false, message: "Firebase ID token is required." });
+    const { phone, uid } = await verifyFirebasePhoneIdToken(idToken);
+    assertSamePhone(partner.phone, phone);
+    partner.firebaseUid = uid;
+    partner.phone = phone;
     partner.phoneVerification.isVerified = true;
     partner.phoneVerification.verifiedAt = new Date();
     partner.phoneVerification.otpHash = null;
     partner.phoneVerification.expiresAt = null;
     partner.applicationStatus = partner.emailVerification?.isVerified ? "Submitted" : "Pending_Email_Verification";
+    partner.verificationHistory.push({ status: "PHONE_VERIFIED", remarks: "Phone verified through Firebase Phone Authentication", actor: { name: partner.name, role: "Applicant" } });
     await partner.save();
-    return res.json({ success: true, message: "Mobile verified", data: sanitize(partner) });
+    return res.json({ success: true, message: "Firebase mobile verified", data: sanitize(partner) });
   } catch (error) {
-    console.error("VERIFY PARTNER PHONE OTP ERROR:", error);
-    return res.status(500).json({ success: false, message: error?.message || "Unable to verify mobile" });
+    console.error("VERIFY PARTNER FIREBASE PHONE ERROR:", error);
+    return res.status(error.statusCode || 400).json({ success: false, code: error.code || "FIREBASE_PHONE_VERIFICATION_FAILED", message: error.message || "Unable to verify Firebase phone token" });
   }
 };
 
