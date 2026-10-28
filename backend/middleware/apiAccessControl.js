@@ -14,7 +14,7 @@
 //   ["POST", /^\/auth\/reset-password\/?$/],
 
 //   ["POST", /^\/auths\/firebase-phone-login\/?$/],
-  
+
 //   ["POST", /^\/sellers\/auth\/(login|send-login-otp|login-with-otp)\/?$/],
 //   ["GET", /^\/properties(?:\/filter)?\/?$/],
 //   ["GET", /^\/properties\/(?!admin\/?$|all\/?$|partner\/)[^/]+\/?$/],
@@ -87,29 +87,36 @@ const PUBLIC_ROUTES = [
   // Public SEO endpoints used by the website and search engines.
   ["GET", /^\/seo\/(resolve|redirect\/resolve|sitemap\.xml|robots\.txt)\/?$/],
   ["POST", /^\/auth\/login\/?$/],
-  ["POST", /^\/auths\/(register|login-password|send-otp|resend-otp|login-otp)\/?$/],
+  [
+    "POST",
+    /^\/auths\/(register|login-password|send-otp|resend-otp|login-otp)\/?$/,
+  ],
   ["POST", /^\/partner-auth\/login\/?$/],
   ["POST", /^\/partner-applications\/register\/?$/],
   ["POST", /^\/partner-applications\/[^/]+\/resend-otp\/?$/],
   ["PATCH", /^\/partner-applications\/[^/]+\/(verify-email|verify-phone)\/?$/],
-  ["POST", /^\/sellers\/applications\/(register|verify-email|verify-phone|resend-email-otp|resend-phone-otp)\/?$/],
-[
-  "POST",
-  /^\/auths\/firebase-phone-login\/check-account\/?$/
-],
+  [
+    "POST",
+    /^\/sellers\/applications\/(register|verify-email|verify-phone|resend-email-otp|resend-phone-otp)\/?$/,
+  ],
+  ["POST", /^\/auths\/firebase-phone-login\/check-account\/?$/],
+   ["POST", /^\/auths\/firebase-phone-login\/?$/],
   // Password reset - PUBLIC, JWT not required
   ["POST", /^\/auth\/forgot-password\/?$/],
   ["POST", /^\/auth\/reset-password\/?$/],
 
   ["POST", /^\/auths\/firebase-phone-login\/?$/],
-  
+
   ["POST", /^\/sellers\/auth\/(login|send-login-otp|login-with-otp)\/?$/],
   ["GET", /^\/properties(?:\/filter)?\/?$/],
   ["GET", /^\/properties\/(?!admin\/?$|all\/?$|partner\/)[^/]+\/?$/],
   ["GET", /^\/newproperties(?:\/filter)?\/?$/],
   ["GET", /^\/(?:api\/)?landing\/properties\/?$/],
   ["GET", /^\/newproperties\/(?!admin\/?$|all\/?$|partner\/)[^/]+\/?$/],
-  ["GET", /^\/cms\/(hero|round-section|testimonials|agentcorner|plan-section|agent-network|network-density|about-stats|about-genesis|about-mission-vision|about-visionaries|platform-features)(?:\/[^/]+)?\/?$/],
+  [
+    "GET",
+    /^\/cms\/(hero|round-section|testimonials|agentcorner|plan-section|agent-network|network-density|about-stats|about-genesis|about-mission-vision|about-visionaries|platform-features)(?:\/[^/]+)?\/?$/,
+  ],
   ["GET", /^\/blog\/public\/?$/],
   ["GET", /^\/blog\/articles\/slug\/[^/]+\/?$/],
   ["GET", /^\/cms\/services\/public\/?$/],
@@ -132,8 +139,9 @@ const ADMIN_ONLY_MUTATIONS = [
 ];
 
 const matches = (rules, method, path) =>
-  rules.some(([allowedMethod, pattern]) =>
-    allowedMethod === method && pattern.test(path)
+  rules.some(
+    ([allowedMethod, pattern]) =>
+      allowedMethod === method && pattern.test(path),
   );
 
 const isAdminOnly = (method, path) =>
