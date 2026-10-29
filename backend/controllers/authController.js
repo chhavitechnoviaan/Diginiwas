@@ -260,14 +260,35 @@ export const loginWithFirebasePhone = async (req, res) => {
     // --------------------------------------------------------
 
     if (requestedRole === "buyer") {
-      let buyer =
-        (await Buyer.findOne({ firebaseUid })) ||
-        (await Buyer.findOne({
-          phone: {
-            $in: uniquePhoneCandidates,
-          },
-        }));
+      // let buyer =
+      //   (await Buyer.findOne({ firebaseUid })) ||
+      //   (await Buyer.findOne({
+      //     phone: {
+      //       $in: uniquePhoneCandidates,
+      //     },
+      //   }));
+const buyerByUid = await Buyer.findOne({ firebaseUid });
 
+const buyerByPhone = await Buyer.findOne({
+  phone: {
+    $in: uniquePhoneCandidates,
+  },
+});
+
+if (
+  buyerByUid &&
+  buyerByPhone &&
+  String(buyerByUid._id) !== String(buyerByPhone._id)
+) {
+  return res.status(409).json({
+    success: false,
+    code: "FIREBASE_UID_ACCOUNT_CONFLICT",
+    message:
+      "This Firebase account is linked to a different Buyer record. The account link must be corrected before login.",
+  });
+}
+
+let buyer = buyerByPhone || buyerByUid;
       // Deleted buyer
       if (buyer?.isDeleted) {
         const error = new Error(
