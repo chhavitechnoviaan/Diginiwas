@@ -1,8 +1,4 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-} from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./layout/login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -36,26 +32,20 @@ import LeadDashboard from "./pages/Admin/Leads/LeadDashboard";
 import PropertyDashboard from "./pages/Admin/Property/PropertyDashboard";
 import CreditDashboard from "./pages/Admin/Credits/CreditDashboard";
 import Notifications from "./pages/Admin/Notifications";
-import AdvertisementDashboard from "./pages/Admin/Advertisements/AdvertisementDashboard"
-import SEODashboard from "./pages/Admin/SEO/SEODashboard"
+import AdvertisementDashboard from "./pages/Admin/Advertisements/AdvertisementDashboard";
+import SEODashboard from "./pages/Admin/SEO/SEODashboard";
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* LOGIN */}
-        <Route
-          path="/"
-          element={<Login />}
-        />
+        <Route path="/" element={<Login />} />
 
         {/* PROTECTED ROUTES */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AdminLayout />}>
             {/* MAIN DASHBOARD */}
-            <Route
-              path="/dashboard"
-              element={<Dashboard />}
-            />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/notifications" element={<Notifications />} />
 
             {/* PROPERTY */}
@@ -63,26 +53,20 @@ function App() {
               path="/property-management"
               element={<PropertyManagement />}
             />
-<Route  path="/advertisements" element={ <AdvertisementDashboard />}/>
+            <Route
+              path="/advertisements"
+              element={<AdvertisementDashboard />}
+            />
             <Route path="/seo" element={<SEODashboard />} />
             <Route
               path="/property-management/:id"
               element={<PropertyManagement />}
             />
 
-            <Route
-              path="/property-approval"
-              element={<PropertyApproval />}
-            />
+            <Route path="/property-approval" element={<PropertyApproval />} />
 
-            <Route
-              path="/add-property"
-              element={<AddProperty />}
-            />
-<Route
-              path="/drafts"
-              element={<Draft />}
-            />
+            <Route path="/add-property" element={<AddProperty />} />
+            <Route path="/drafts" element={<Draft />} />
             <Route
               path="/property-commandcenter"
               element={<PropertyCommandCenter />}
@@ -98,16 +82,10 @@ function App() {
               element={<PropertyAuditHistory />}
             />
 
-            <Route
-              path="/property"
-              element={<PropertyDashboard />}
-            />
+            <Route path="/property" element={<PropertyDashboard />} />
 
             {/* CMS */}
-            <Route
-              path="/cms"
-              element={<CMSDashboard />}
-            />
+            <Route path="/cms" element={<CMSDashboard />} />
 
             {/* ==================================================
                 BUYER
@@ -115,10 +93,7 @@ function App() {
                 Buyer list + Buyer detail BOTH BuyerDashboard
                 wrapper ke through render honge.
             ================================================== */}
-            <Route
-              path="/buyer-dashboard"
-              element={<BuyerDashboard />}
-            />
+            <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
 
             <Route
               path="/buyer-dashboard/:buyerId"
@@ -126,47 +101,23 @@ function App() {
             />
 
             {/* LEADS */}
-            <Route
-              path="/leads"
-              element={<Leads />}
-            />
+            <Route path="/leads" element={<Leads />} />
 
-            <Route
-              path="/lead-management"
-              element={<LeadManagementApp />}
-            />
+            <Route path="/lead-management" element={<LeadManagementApp />} />
 
-            <Route
-              path="/leads-dashboard"
-              element={<LeadDashboard />}
-            />
+            <Route path="/leads-dashboard" element={<LeadDashboard />} />
 
             {/* SELLER */}
-            <Route
-              path="/sellers"
-              element={<Sellers />}
-            />
+            <Route path="/sellers" element={<Sellers />} />
 
-            <Route
-              path="/seller-dashboard"
-              element={<SellerDashboard />}
-            />
+            <Route path="/seller-dashboard" element={<SellerDashboard />} />
 
             {/* USERS */}
-            <Route
-              path="/user"
-              element={<UsersManagement />}
-            />
- <Route
-              path="/credits"
-              element={<CreditDashboard />}
-            />
+            <Route path="/user" element={<UsersManagement />} />
+            <Route path="/credits" element={<CreditDashboard />} />
 
             {/* WALLET */}
-            <Route
-              path="/wallet-credits"
-              element={<WalletCreditDashboard />}
-            />
+            <Route path="/wallet-credits" element={<WalletCreditDashboard />} />
 
             {/* PARTNERS */}
             <Route
@@ -174,36 +125,21 @@ function App() {
               element={<PartnerApplications />}
             />
 
-            <Route
-              path="/partners"
-              element={<PartnerManagement />}
-            />
+            <Route path="/partners" element={<PartnerManagement />} />
 
-            <Route
-              path="/partners/:id"
-              element={<PartnerManagement />}
-            />
+            <Route path="/partners/:id" element={<PartnerManagement />} />
 
             <Route
               path="/partner-assigment"
               element={<PartnerAssignmentQueue />}
             />
 
-            <Route
-              path="/partnerdashboard"
-              element={<PartnerDashboard />}
-            />
+            <Route path="/partnerdashboard" element={<PartnerDashboard />} />
 
             {/* VISITS */}
-            <Route
-              path="/visit-management"
-              element={<VisitManagement />}
-            />
+            <Route path="/visit-management" element={<VisitManagement />} />
 
-            <Route
-              path="/visit-management/:id"
-              element={<VisitManagement />}
-            />
+            <Route path="/visit-management/:id" element={<VisitManagement />} />
           </Route>
         </Route>
       </Routes>
@@ -212,8 +148,6 @@ function App() {
 }
 
 export default App;
-
-
 
 // import { BrowserRouter, Routes, Route } from "react-router-dom";
 

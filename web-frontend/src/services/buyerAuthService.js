@@ -212,6 +212,10 @@ const endpoint = (envKey, fallback) =>
   import.meta.env[envKey] || fallback;
 
 const ENDPOINTS = {
+firebaseAccountCheck: endpoint(
+  "VITE_BUYER_FIREBASE_ACCOUNT_CHECK_ENDPOINT",
+  "/v1/auths/firebase-phone-login/check-account"
+),
   firebaseLogin: endpoint(
     "VITE_BUYER_FIREBASE_LOGIN_ENDPOINT",
     "/v1/auths/firebase-phone-login"
@@ -264,6 +268,55 @@ function resetRecaptcha() {
 }
 
 const getPayload = (response) => response?.data?.data ?? response?.data ?? {};
+
+/**
+ * Check the buyer account before sending an OTP and again immediately before
+ * calling the Firebase login endpoint. A missing/inactive account must never
+ * proceed to /firebase-phone-login.
+ */
+async function ensureBuyerAccountExists(phone) {
+  // let digits = String(phone || "").replace(/\\D/g, "");
+  let digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  }
+  if (digits.length !== 10) {
+    throw new Error("Please enter a valid 10-digit mobile number.");
+  }
+
+  try {
+    const response = await axios.post(ENDPOINTS.firebaseAccountCheck, {
+      phone: `+91${digits}`,
+      role: "buyer",
+    });
+    const result = getPayload(response);
+
+    if (result.accountExists !== true) {
+      const error = new Error(
+        result.message || "No buyer account exists with this number. Please create an account first."
+      );
+      error.code = result.code || "ACCOUNT_NOT_FOUND";
+      throw error;
+    }
+
+    if (result.canLogin === false) {
+      throw new Error(
+        result.message || `Your buyer account is not active${result.accountStatus ? ` (${result.accountStatus})` : ""}. Please contact support.`
+      );
+    }
+
+    return result;
+  } catch (error) {
+    if (error?.response?.status === 404 ||
+        error?.response?.data?.code === "ACCOUNT_NOT_FOUND") {
+      throw new Error(
+        error?.response?.data?.message ||
+        "No buyer account exists with this number. Please create an account first."
+      );
+    }
+    throw error;
+  }
+}
 
 const saveBuyerSession = (payload, response = null) => {
   const data = payload || {};
@@ -335,22 +388,73 @@ const getRecaptcha = async () => {
   return recaptchaVerifier;
 };
 
+// export async function sendBuyerOtp(phone) {
+//   const digits = String(phone || "").replace(/\D/g, "");
+//   if (digits.length !== 10) {
+//     throw new Error("Please enter a valid 10-digit mobile number.");
+//   }
+
+//   const normalizedPhone = `+91${digits}`;
+//   confirmationResult = null;
+
+//   // Do not send an OTP to a phone number that is not registered as a buyer.
+//   await ensureBuyerAccountExists(normalizedPhone);
+
+//   try {
+//     const verifier = await getRecaptcha();
+//     confirmationResult = await signInWithPhoneNumber(
+//       firebaseAuth,
+//       normalizedPhone,
+//       verifier
+//     );
+
+//     return {
+//       success: true,
+//       provider: "firebase",
+//       channel: "sms",
+//     };
+//   } catch (error) {
+//     // Firebase reCAPTCHA tokens can become invalid after a failed send. Clear
+//     // the verifier so the next attempt creates a fresh one instead of reusing it.
+//     confirmationResult = null;
+//     resetRecaptcha();
+//     const friendlyError = new Error(getFirebaseErrorMessage(error));
+//     friendlyError.code = error?.code;
+//     friendlyError.cause = error;
+//     throw friendlyError;
+//   }
+// }
+
+
 export async function sendBuyerOtp(phone) {
   const digits = String(phone || "").replace(/\D/g, "");
+
   if (digits.length !== 10) {
     throw new Error("Please enter a valid 10-digit mobile number.");
   }
 
   const normalizedPhone = `+91${digits}`;
+
   confirmationResult = null;
+
+  console.log("[Buyer OTP] Checking account...");
+
+  await ensureBuyerAccountExists(normalizedPhone);
+
+  console.log("[Buyer OTP] Account check passed. Loading reCAPTCHA...");
 
   try {
     const verifier = await getRecaptcha();
+
+    console.log("[Buyer OTP] reCAPTCHA ready. Requesting Firebase SMS...");
+
     confirmationResult = await signInWithPhoneNumber(
       firebaseAuth,
       normalizedPhone,
       verifier
     );
+
+    console.log("[Buyer OTP] Firebase SMS request succeeded.");
 
     return {
       success: true,
@@ -358,16 +462,19 @@ export async function sendBuyerOtp(phone) {
       channel: "sms",
     };
   } catch (error) {
-    // Firebase reCAPTCHA tokens can become invalid after a failed send. Clear
-    // the verifier so the next attempt creates a fresh one instead of reusing it.
+    console.error("[Buyer OTP] Firebase error:", error);
+
     confirmationResult = null;
     resetRecaptcha();
+
     const friendlyError = new Error(getFirebaseErrorMessage(error));
     friendlyError.code = error?.code;
     friendlyError.cause = error;
+
     throw friendlyError;
   }
 }
+
 
 export async function resendBuyerOtp(phone) {
   confirmationResult = null;
@@ -382,6 +489,10 @@ export async function verifyBuyerOtp(otp) {
 
   const credential = await confirmationResult.confirm(otp);
   const idToken = await credential.user.getIdToken(true);
+
+  // Re-check immediately before login. If the account is missing/inactive,
+  // never call the Firebase login endpoint.
+  await ensureBuyerAccountExists(credential.user.phoneNumber);
 
   const response = await axios.post(ENDPOINTS.firebaseLogin, {
     idToken,

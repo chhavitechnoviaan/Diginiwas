@@ -149,9 +149,32 @@ const isAdminOnly = (method, path) =>
   (method !== "GET" &&
     ADMIN_ONLY_MUTATIONS.some((pattern) => pattern.test(path)));
 
+// export const apiAccessControl = (req, res, next) => {
+//   const method = req.method.toUpperCase();
+//   const path = req.path;
+
+//   if (matches(PUBLIC_ROUTES, method, path)) {
+//     return next();
+//   }
+
+//   return protect(req, res, () => {
+//     if (isAdminOnly(method, path)) {
+//       return requireAdmin(req, res, next);
+//     }
+
+//     return next();
+//   });
+// };
+
+
 export const apiAccessControl = (req, res, next) => {
   const method = req.method.toUpperCase();
-  const path = req.path;
+
+  // Normalize paths for both /api/v1/... and /api/...
+  const path = req.originalUrl
+    .split("?")[0]
+    .replace(/^\/api\/v1(?=\/|$)/, "")
+    .replace(/^\/api(?=\/|$)/, "") || "/";
 
   if (matches(PUBLIC_ROUTES, method, path)) {
     return next();
@@ -165,6 +188,7 @@ export const apiAccessControl = (req, res, next) => {
     return next();
   });
 };
+
 
 export const versionedApiHeaders = (_req, res, next) => {
   res.setHeader("X-API-Version", "1");
