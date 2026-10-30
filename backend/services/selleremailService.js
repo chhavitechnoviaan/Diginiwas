@@ -191,8 +191,7 @@ export const sendSellerEmailOtp =
       throw new Error("Seller email OTP recipient is required");
     }
 
-    // await transporter.sendMail({
-    await getTransporter().sendMail({
+    await transporter.sendMail({
       from,
 
       to,
@@ -609,8 +608,8 @@ export const sendSellerApplicationRejectedEmail =
 export const verifySellerMailer =
   async () => {
     try {
-      // await transporter.verify();
-await getTransporter().verify();
+      await transporter.verify();
+
       console.log(
         "SELLER SMTP READY"
       );
