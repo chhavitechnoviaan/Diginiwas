@@ -1,6 +1,5 @@
 import express from "express";
 import multer from "multer";
-import dotenv from "dotenv";
 import "dotenv/config";
 import cors from "cors";
 import connectDB from "./config/db.js";
