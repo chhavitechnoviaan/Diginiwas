@@ -87,14 +87,11 @@ const buyerSchema = new mongoose.Schema(
       trim: true,
     },
 
-    firebaseUid: {
-      type: String,
-      default: null,
-      unique: true,
-      sparse: true,
-      index: true,
-    },
-
+firebaseUid: {
+  type: String,
+  default: null
+}
+,
     password: {
       type: String,
       required: true,
