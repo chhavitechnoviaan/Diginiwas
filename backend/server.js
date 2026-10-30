@@ -1,3 +1,4 @@
+import generalNotificationRoutes from "./routes/notificationRoutes.js";
 import express from "express";
 import multer from "multer";
 import "dotenv/config";
@@ -131,6 +132,7 @@ const mountApiRoutes = (basePath) => {
   app.use(`${basePath}/advertisements`, advertisementRoutes);
   app.use(`${basePath}/admin/dashboard`, adminDashboardRoutes);
   app.use(`${basePath}/admin/notifications`, adminNotificationRoutes);
+  app.use(`${basePath}/notifications`, generalNotificationRoutes);
   app.use(`${basePath}/admin/profile`, adminProfileRoutes);
   app.use(`${basePath}/admin/users`, adminUsersRoutes);
   app.use(`${basePath}/account`, accountRoutes);

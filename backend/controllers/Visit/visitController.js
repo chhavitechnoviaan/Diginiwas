@@ -575,6 +575,8 @@ const makeBuyerSnapshot = (buyer) => ({
   city: buyer?.location?.city || "",
 });
 
+import { notifyMany } from "../../services/notificationService.js";
+import { notifyAdmins } from "../../services/adminNotificationService.js";
 export const getVisitSummary = async (req, res) => {
   try {
     const now = new Date();
@@ -796,6 +798,26 @@ export const getVisitById = async (req, res) => {
   }
 };
 
+
+const visitRecipients = visit => [
+  { userId: visit.buyerId, userRole: "buyer" },
+  { userId: visit.partnerId, userRole: "partner" },
+];
+async function sendVisitOutcome(visit, status, suffix = "") {
+  const propertyName = visit.propertySnapshot?.title || visit.propertySnapshot?.projectName || "your property";
+  const when = visit.approvedVisitAt || visit.requestedVisitAt;
+  const titles = { Approved: "Visit Approved", Rejected: "Visit Rejected", Completed: "Visit Completed", Cancelled: "Visit Cancelled", Rescheduled: "Visit Rescheduled" };
+  const messages = {
+    Approved: `Your visit to ${propertyName} is confirmed for ${new Date(when).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}.`,
+    Rejected: `The visit request for ${propertyName} was not approved. View the reason.`,
+    Completed: `The visit to ${propertyName} is marked complete.`,
+    Cancelled: `The visit to ${propertyName} has been cancelled.`,
+    Rescheduled: `The visit to ${propertyName} has been rescheduled to ${new Date(when).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}.`,
+  };
+  if (!titles[status]) return;
+  await notifyMany(visitRecipients(visit), { title: titles[status], message: messages[status], type: `VISIT_${status.toUpperCase()}`, actionUrl: `/visits/${visit._id}`, entityType: "Visit", entityId: visit._id, eventKey: `visit:${visit._id}:${status}:${suffix || visit.updatedAt?.getTime()}` });
+}
+
 export const createVisitRequest = async (req, res) => {
   try {
     const {
@@ -936,6 +958,11 @@ export const createVisitRequest = async (req, res) => {
       ],
     });
 
+    if (teamOwner) {
+      await notifyMany([{ userId: teamOwner._id, userRole: "partner" }], { title: "Team Visit Needs Review", message: `A visit request for ${(property.title || property.projectName || "property")} requires your review.`, type: "TEAM_VISIT_REVIEW", entityType: "Visit", entityId: visit._id, actionUrl: `/visits/${visit._id}`, eventKey: `visit:${visit._id}:team-review` });
+    } else {
+      await notifyAdmins({ title: "Visit Request Pending", message: `A visit request requires review.`, type: "VISIT_REQUEST", entityType: "Visit", entityId: visit._id, actionUrl: `/admin/visits/${visit._id}` });
+    }
     return res.status(201).json({
       success: true,
       message: partner.accountType === "subagent" || partner.isSubPartner
@@ -1035,6 +1062,7 @@ export const reviewVisitRequest = async (req, res) => {
     });
 
     await visit.save();
+    if (oldStatus !== visit.status) await sendVisitOutcome(visit, approvalStatus);
 
     return res.status(200).json({
       success: true,
@@ -1136,6 +1164,7 @@ export const updateVisitStatus = async (req, res) => {
     });
 
     await visit.save();
+    if (oldStatus !== visit.status && ["Completed", "Cancelled", "Rescheduled"].includes(status)) await sendVisitOutcome(visit, status);
 
     return res.status(200).json({
       success: true,

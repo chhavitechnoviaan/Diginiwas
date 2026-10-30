@@ -1,3 +1,4 @@
+import { notifyUser } from "../../services/notificationService.js";
 import mongoose from "mongoose";
 import Partner from "../../models/Partner.js";
 import Property from "../../models/NewProperty.js";
@@ -282,6 +283,7 @@ export const approvePromotionRequest = async (req, res) => {
         await target.save({ session });
       }
     });
+    await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Approved", message: `Your promotion request has been approved and activated.`, type: "PROMOTION_APPROVED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:approved` });
     return res.json({ success: true, message: `${request.targetType} promotion approved and activated`, data: { request, target } });
   } catch (error) { return res.status(error.http || 500).json({ success: false, message: "Unable to approve promotion", error: error.message }); }
   finally { await session.endSession(); }
@@ -342,6 +344,7 @@ export const rejectPromotionRequest = async (req, res) => {
         }
       }
     });
+    await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Rejected", message: "Your promotion request was not approved. View details and the refund status.", type: "PROMOTION_REJECTED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:rejected` });
     return res.json({ success: true, message: "Promotion rejected and credits refunded", data: {
       request,
       wallet: refundResults.at(-1)?.wallet,

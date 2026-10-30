@@ -11,12 +11,14 @@ const notificationSchema = new mongoose.Schema(
     actionUrl: { type: String, default: "", trim: true },
     entityType: { type: String, default: "", index: true },
     entityId: { type: mongoose.Schema.Types.ObjectId, default: null, index: true },
+    eventKey: { type: String, default: undefined },
     isRead: { type: Boolean, default: false, index: true },
     readAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
 
+notificationSchema.index({ userId: 1, userRole: 1, eventKey: 1 }, { unique: true, partialFilterExpression: { eventKey: { $type: "string" } } });
 notificationSchema.index({ userId: 1, userRole: 1, isRead: 1, createdAt: -1 });
 
 export default mongoose.models.Notification ||

@@ -1,3 +1,4 @@
+import { notifyUser } from "../../services/notificationService.js";
 // import mongoose from "mongoose";
 // import Partner from "../../models/Partner.js";
 // import TeamWallet from "../../models/TeamWallet.js";
@@ -1908,6 +1909,7 @@ export const markPartnerVerified =
       );
 
       await partner.save();
+      await notifyUser({ userId: partner._id, userRole: "partner", title: "Partner Verified", message: "Your partner application has been approved and verified.", type: "PARTNER_VERIFIED", entityType: "Partner", entityId: partner._id, actionUrl: "/partner/application", eventKey: `partner:${partner._id}:partner_verified` });
 
       return res.json({
         success: true,
@@ -1985,6 +1987,7 @@ export const requestPartnerAction =
       );
 
       await partner.save();
+      await notifyUser({ userId: partner._id, userRole: "partner", title: "KYC Correction Required", message: "Please update your requested partner application or KYC details.", type: "PARTNER_CORRECTION", entityType: "Partner", entityId: partner._id, actionUrl: "/partner/application", eventKey: `partner:${partner._id}:partner_correction` });
 
       return res.json({
         success: true,
@@ -2094,6 +2097,7 @@ export const rejectPartnerApplication =
       );
 
       await partner.save();
+      await notifyUser({ userId: partner._id, userRole: "partner", title: "Partner Application Rejected", message: "Your partner application was not approved. View the reason.", type: "PARTNER_REJECTED", entityType: "Partner", entityId: partner._id, actionUrl: "/partner/application", eventKey: `partner:${partner._id}:partner_rejected` });
 
       return res.json({
         success: true,
