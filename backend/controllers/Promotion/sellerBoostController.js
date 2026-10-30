@@ -6,6 +6,7 @@ import PromotionRequest from "../../models/PromotionRequest.js";
 import { getCreditProduct } from "../../services/creditPricingService.js";
 import { createPromotionRequest } from "./promotionV2Controller.js";
 import { notifyUser } from "../../services/notificationService.js";
+import { notifyAdmins } from "../../services/adminNotificationService.js";
 
 const allowed = new Set(["PROPERTY_BOOST", "FEATURED_7_DAYS", "LOCALITY_TOP_30_DAYS"]);
 const error = (res, code, message) => res.status(code).json({ success: false, message });
@@ -37,6 +38,7 @@ export async function createSellerBoostRequest(req, res) {
     if (prior) return error(res, 409, "An active or pending request for this boost already exists");
     const request = await SellerBoostRequest.create({ sellerId: req.user.id, propertyId, partnerId: partner._id, promotionType, message: String(message).slice(0,1000), creditPriceAtRequest: plan.credits });
     await notifyUser({ userId: partner._id, userRole: "partner", title: "Seller requested property boost", message: `A seller has requested ${promotionType} for ${property.title}.`, type: "SELLER_BOOST_REQUEST", entityType: "SellerBoostRequest", entityId: request._id, actionUrl: `/seller-boost-requests/${request._id}`, eventKey: `seller-boost:${request._id}:created` });
+    await notifyAdmins({ title: "Seller requested property boost", message: `A seller requested ${promotionType} for ${property.title}; partner approval is pending.`, type: "SELLER_BOOST_REQUEST", entityType: "SellerBoostRequest", entityId: request._id, actionUrl: "/notifications" });
     return res.status(201).json({ success: true, message: "Boost request sent to assigned partner", data: request });
   } catch (e) { return error(res, 500, e.message); }
 }

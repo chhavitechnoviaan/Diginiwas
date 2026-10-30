@@ -399,3 +399,8 @@ export const getSellerPropertyByIdApi = async (
 
   return response.data;
 };
+// Admin-only: Seller collection ID -> all related seller-to-partner boost requests.
+export const getAdminSellerBoostRequestsApi = async (sellerId, params = {}) => {
+  const { default: adminApi } = await import("./axios");
+  return (await adminApi.get(`/admin/sellers/${sellerId}/boost-requests`, { params })).data;
+};

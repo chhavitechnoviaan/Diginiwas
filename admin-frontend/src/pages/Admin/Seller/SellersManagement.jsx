@@ -40,6 +40,7 @@ import {
 
 import {
   getAllSellersApi,
+  getAdminSellerBoostRequestsApi,
   getSellerByIdApi,
   getSellerPropertyByIdApi,
   verifySellerApi,
@@ -707,6 +708,31 @@ function SellerManagementList({
   );
 }
 
+
+function SellerBoostHistory({ sellerId }) {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  useEffect(() => {
+    let active = true;
+    setLoading(true); setError("");
+    getAdminSellerBoostRequestsApi(sellerId, { page, limit: 20 })
+      .then(res => { if (active) { setRequests(res.data || []); setPages(res.pagination?.pages || 1); } })
+      .catch(err => { if (active) setError(err?.response?.data?.message || "Unable to load boost requests"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [sellerId, page]);
+  const statusOf = (r) => r.adminPromotion?.status || r.status;
+  return <section className="my-5 rounded-2xl border border-[#DCE5E9] bg-white p-5 shadow-sm">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-base font-bold text-[#173247]">Property Boost Requests</h3><p className="text-xs text-[#667B88]">Properties this seller asked their assigned partners to promote</p></div></div>
+    {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
+    {loading ? <p className="py-6 text-sm text-slate-500">Loading boost requests...</p> : requests.length === 0 ? <p className="py-6 text-sm text-slate-500">No boost requests found for this seller.</p> : <div className="overflow-x-auto"><table className="min-w-full text-left text-xs"><thead className="bg-[#F2F6F7] text-[#526A78]"><tr>{["Property", "Requested Partner", "Boost Plan", "DigiCredits", "Request Date", "Partner / Admin Status", "Reason"].map(h => <th key={h} className="whitespace-nowrap px-3 py-3">{h}</th>)}</tr></thead><tbody>{requests.map(r => <tr key={r._id} className="border-b border-[#E7EEF1]"><td className="px-3 py-3 font-semibold">{r.propertyId?.title || r.propertyId?.propertyId || "Property unavailable"}</td><td className="px-3 py-3">{r.partner?.name || "Partner unavailable"}</td><td className="px-3 py-3">{r.promotionType?.replaceAll("_", " ")}</td><td className="px-3 py-3">{r.creditPriceAtRequest ?? "—"}</td><td className="whitespace-nowrap px-3 py-3">{r.createdAt ? new Date(r.createdAt).toLocaleString("en-IN") : "—"}</td><td className="px-3 py-3"><span className="rounded-full bg-[#EAF9F4] px-2 py-1 font-semibold text-[#15966F]">{statusOf(r)}</span></td><td className="max-w-48 break-words px-3 py-3">{r.rejectionReason || r.adminPromotion?.adminRemarks || "—"}</td></tr>)}</tbody></table></div>}
+    <div className="mt-3 flex items-center justify-end gap-2 text-xs"><button disabled={page === 1} onClick={() => setPage(p => p-1)} className="rounded border px-3 py-1 disabled:opacity-40">Previous</button><span>{page} / {pages}</span><button disabled={page >= pages} onClick={() => setPage(p => p+1)} className="rounded border px-3 py-1 disabled:opacity-40">Next</button></div>
+  </section>;
+}
+
 /* ======================================================
    SELLER CONTROL TOWER
 ====================================================== */
@@ -997,6 +1023,8 @@ function SellerControlTower({
             Back to Sellers
           </button> */}
         </div>
+
+        <SellerBoostHistory sellerId={sellerId} />
 
         <section className="rounded-2xl border border-[#DCE5E9] bg-white p-5 shadow-[0_4px_18px_rgba(15,47,69,0.04)]">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">

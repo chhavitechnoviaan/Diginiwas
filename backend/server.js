@@ -50,6 +50,7 @@ import propertyReviewRoutes from "./routes/propertyReviewRoutes.js";
 import advertisementRoutes from "./routes/advertisementRoutes.js";
 import adminDashboardRoutes from "./routes/Admin/dashboardRoutes.js";
 import adminNotificationRoutes from "./routes/Admin/notificationRoutes.js";
+import adminSellerBoostAuditRoutes from "./routes/Admin/sellerBoostAuditRoutes.js";
 import adminProfileRoutes from "./routes/Admin/profileRoutes.js";
 import adminUsersRoutes from "./routes/Admin/usersRoutes.js";
 import accountRoutes from "./routes/accountRoutes.js";
@@ -132,6 +133,7 @@ const mountApiRoutes = (basePath) => {
   app.use(`${basePath}/advertisements`, advertisementRoutes);
   app.use(`${basePath}/admin/dashboard`, adminDashboardRoutes);
   app.use(`${basePath}/admin/notifications`, adminNotificationRoutes);
+  app.use(`${basePath}/admin/sellers`, adminSellerBoostAuditRoutes);
   app.use(`${basePath}/notifications`, generalNotificationRoutes);
   app.use(`${basePath}/admin/profile`, adminProfileRoutes);
   app.use(`${basePath}/admin/users`, adminUsersRoutes);
