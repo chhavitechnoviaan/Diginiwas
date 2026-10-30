@@ -120,14 +120,17 @@ const partnerSchema = new mongoose.Schema(
   index: true,
 },
 
+// firebaseUid: {
+//   type: String,
+//   default: null,
+//   unique: true,
+//   sparse: true,
+//   index: true,
+// },
 firebaseUid: {
   type: String,
-  default: null,
-  unique: true,
-  sparse: true,
-  index: true,
+  default: null
 },
-
 password: {
   type: String,
   default: "",
