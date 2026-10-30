@@ -82,14 +82,17 @@ phone: {
   index: true,
 },
 
+// firebaseUid: {
+//   type: String,
+//   default: null,
+//   unique: true,
+//   sparse: true,
+//   index: true,
+// },
 firebaseUid: {
   type: String,
   default: null,
-  unique: true,
-  sparse: true,
-  index: true,
 },
-
 password: {
   type: String,
   default: null,
@@ -345,5 +348,14 @@ sellerSchema.pre("save", async function () {
 sellerSchema.index({
   "location.coordinates": "2dsphere",
 });
-
+// Firebase UID must be unique only when it is a string.
+sellerSchema.index(
+  { firebaseUid: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      firebaseUid: { $type: "string" },
+    },
+  }
+);
 export default mongoose.model("Seller", sellerSchema);
