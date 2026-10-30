@@ -51,7 +51,14 @@ import {
 } from "../../controllers/Promotion/promotionV2Controller.js";
 import { protect, requireAdmin } from "../../middleware/authMiddleware.js";
 
+import { createSellerBoostRequest, listSellerBoostRequests, getSellerBoostRequest, approveSellerBoostRequest, rejectSellerBoostRequest } from "../../controllers/Promotion/sellerBoostController.js";
 const router = express.Router();
+router.post("/seller-request", protect, createSellerBoostRequest);
+router.get("/seller-requests", protect, listSellerBoostRequests);
+router.get("/partner-requests", protect, listSellerBoostRequests);
+router.get("/seller-request/:id", protect, getSellerBoostRequest);
+router.patch("/seller-request/:id/approve", protect, approveSellerBoostRequest);
+router.patch("/seller-request/:id/reject", protect, rejectSellerBoostRequest);
 // Generic create: targetType decides PARTNER or PROPERTY.
 router.post("/", protect, createPromotionRequest);
 router.post("/partner/request", protect, (req, _res, next) => { req.body.targetType = "PARTNER"; next(); }, createPromotionRequest);

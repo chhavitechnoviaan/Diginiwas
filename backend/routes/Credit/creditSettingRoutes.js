@@ -43,10 +43,11 @@
 
 
 import express from "express";
-import { getCreditSettings, updateCreditSettings, updateCreditProduct, resetCreditSettings } from "../../controllers/Credit/creditSettingController.js";
+import { getCreditSettings, updateCreditSettings, updateCreditProduct, resetCreditSettings, getActiveCreditPlans } from "../../controllers/Credit/creditSettingController.js";
 import { protect } from "../../middleware/authMiddleware.js";
 const router = express.Router();
 router.get("/", getCreditSettings);
+router.get("/plans", getActiveCreditPlans);
 router.patch("/", protect, updateCreditSettings);
 router.patch("/product/:code", protect, updateCreditProduct);
 router.post("/reset", protect, resetCreditSettings);
