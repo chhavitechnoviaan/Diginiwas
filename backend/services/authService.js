@@ -253,17 +253,30 @@ class AuthService {
     // DUPLICATE EMAIL
     // ==========================================
 
-    const existingEmail =
-      await Model.findOne({
-        email,
-      });
+    // const existingEmail =
+    //   await Model.findOne({
+    //     email,
+    //   });
 
-    if (existingEmail) {
-      throw new Error(
-        "Email address is already registered"
-      );
-    }
+    // if (existingEmail) {
+    //   throw new Error(
+    //     "Email address is already registered"
+    //   );
+    // }
+const normalizedEmail = String(email || "")
+  .trim()
+  .toLowerCase();
 
+// Email duplicate check only when email is provided
+if (normalizedEmail) {
+  const existingEmail = await Model.findOne({
+    email: normalizedEmail,
+  });
+
+  if (existingEmail) {
+    throw new Error("Email address is already registered");
+  }
+}
     // ==========================================
     // PASSWORD HASH
     // ==========================================
@@ -313,18 +326,25 @@ class AuthService {
     // COMMON DATA
     // ==========================================
 
-    const userData = {
-      name,
-      email,
-      phone,
-      password:
-        hashedPassword,
-      role:
-        normalizedRole,
-      location:
-        formattedLocation,
-    };
-
+    // const userData = {
+    //   name,
+    //   email,
+    //   phone,
+    //   password:
+    //     hashedPassword,
+    //   role:
+    //     normalizedRole,
+    //   location:
+    //     formattedLocation,
+    // };
+const userData = {
+  name,
+  ...(normalizedEmail ? { email: normalizedEmail } : {}),
+  phone,
+  password: hashedPassword,
+  role: normalizedRole,
+  location: formattedLocation,
+};
     // ==========================================
     // SELLER ID
     // ==========================================

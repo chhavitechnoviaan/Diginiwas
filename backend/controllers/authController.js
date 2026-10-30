@@ -834,13 +834,18 @@ export const register = async (req, res) => {
       partnerType,
     } = req.body;
 
-    if (!name || !email || !phone || !password || !role) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
-    }
-
+    // if (!name || !email || !phone || !password || !role) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "All fields are required",
+    //   });
+    // }
+if (!name || !phone || !password || !role) {
+  return res.status(400).json({
+    success: false,
+    message: "Name, phone, password and role are required",
+  });
+}
     if (!isBuyerRole(role)) {
       return res.status(400).json({
         success: false,

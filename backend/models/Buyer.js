@@ -72,14 +72,20 @@ const buyerSchema = new mongoose.Schema(
       trim: true,
     },
 
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-
+    // email: {
+    //   type: String,
+    //   required: true,
+    //   unique: true,
+    //   lowercase: true,
+    //   trim: true,
+    // },
+email: {
+  type: String,
+  required: false,
+  lowercase: true,
+  trim: true,
+  default: undefined,
+},
     phone: {
       type: String,
       required: true,
@@ -214,5 +220,14 @@ buyerSchema.pre("save", function () {
 });
 
 buyerSchema.index({ "location.coordinates": "2dsphere" });
+buyerSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      email: { $type: "string" },
+    },
+  }
+);
 
 export default mongoose.model("Buyer", buyerSchema);
