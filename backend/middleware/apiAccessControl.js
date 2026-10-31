@@ -84,6 +84,11 @@
 import { protect, requireAdmin } from "./authMiddleware.js";
 
 const PUBLIC_ROUTES = [
+  // Public plan/feature read endpoints for Seller and Partner plan selection.
+  ["GET", /^\/promotion-plans\/?$/],
+  ["GET", /^\/promotion-plans\/features\/?$/],
+  ["GET", /^\/credit-settings\/?$/],
+  ["GET", /^\/credit-settings\/plans\/?$/],
   // Public SEO endpoints used by the website and search engines.
   ["GET", /^\/seo\/(resolve|redirect\/resolve|sitemap\.xml|robots\.txt)\/?$/],
   ["POST", /^\/auth\/login\/?$/],

@@ -1,4 +1,3 @@
-import AllPromotionRequests from "./AllPromotionRequests";
 import CustomPromotionPlans from "./CustomPromotionPlans";
 import {
   useEffect,
@@ -820,7 +819,7 @@ export default function CreditPricingManagement() {
       {/* SERVICE GROUPS */}
       {/* ============================= */}
 
-      {/* {PRODUCT_GROUPS.map(
+      {PRODUCT_GROUPS.map(
         (group) => {
           const groupProducts =
             group.items
@@ -849,7 +848,6 @@ export default function CreditPricingManagement() {
                 }
               />
 
-              {group.id === "locality" && <AllPromotionRequests/>}
               <div className="mt-3 grid gap-4 lg:grid-cols-2">
                 {groupProducts.map(
                   (
@@ -872,7 +870,7 @@ export default function CreditPricingManagement() {
             </div>
           );
         }
-      )} */}
+      )}
 
       <CustomPromotionPlans/>
 

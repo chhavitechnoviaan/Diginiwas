@@ -1,5 +1,5 @@
 // import PromotionPlan from "../models/PromotionPlan.js";
-// import CreditSetting from "../models/CreditSetting.js";
+import CreditSetting from "../models/CreditSetting.js";
 
 // import {
 //   DEFAULT_CREDIT_SETTINGS,
@@ -95,7 +95,7 @@
 //   };
 
 import PromotionPlan from "../models/PromotionPlan.js";
-import CreditSetting from "../models/CreditSetting.js";
+// CreditSetting imported at top of file
 import { DEFAULT_CREDIT_SETTINGS } from "../config/creditPlans.js";
 
 export const getOrCreateCreditSettings = async () => {

@@ -10,9 +10,7 @@ const CREDIT_SETTING_API =
 
 const getAuthHeaders = () => {
   const token =
-    localStorage.getItem(
-      "token"
-    );
+    localStorage.getItem("adminToken") || localStorage.getItem("token");
 
   return {
     headers: {
@@ -28,7 +26,8 @@ export const getCreditSettingsApi =
   async () => {
     const response =
       await axios.get(
-        CREDIT_SETTING_API
+        CREDIT_SETTING_API,
+        getAuthHeaders()
       );
 
     return response.data;

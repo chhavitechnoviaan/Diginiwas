@@ -1716,7 +1716,7 @@ export default function SEODashboard() {
   ];
 
   return (
-    <div className="min-h-full bg-slate-50 p-1 sm:p-6 lg:p-18">
+    <div >
       <div className="mx-auto max-w-[1600px] space-y-6">
         <div className="relative flex flex-col justify-between gap-5 overflow-hidden rounded-[24px] border border-slate-200/70 bg-[#203f50] px-5 py-5 text-white shadow-sm sm:px-7 sm:py-6 md:flex-row md:items-center">
           <div className="pointer-events-none absolute -right-5 -top-12 h-36 w-36 rounded-full border-[24px] border-white/[0.035]" />
