@@ -1,4 +1,5 @@
-// import CreditSetting from "../models/CreditSetting.js";
+// import PromotionPlan from "../models/PromotionPlan.js";
+import CreditSetting from "../models/CreditSetting.js";
 
 // import {
 //   DEFAULT_CREDIT_SETTINGS,
@@ -93,6 +94,7 @@
 //     };
 //   };
 
+import PromotionPlan from "../models/PromotionPlan.js";
 import CreditSetting from "../models/CreditSetting.js";
 import { DEFAULT_CREDIT_SETTINGS } from "../config/creditPlans.js";
 
@@ -110,7 +112,7 @@ export const getOrCreateCreditSettings = async () => {
 
 export const getCreditProduct = async (code) => {
   const settings = await getOrCreateCreditSettings();
-  return settings.products.find((item) => item.code === code && item.isActive !== false) || null;
+  return settings.products.find((item) => item.code === code && item.isActive !== false) || await PromotionPlan.findOne({code,isActive:true}).lean();
 };
 
 export const calculateCreditsFromAmount = async (amountInRupees) => {

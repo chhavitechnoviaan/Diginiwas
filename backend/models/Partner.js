@@ -72,7 +72,6 @@ const promotionRequestSnapshotSchema = new mongoose.Schema(
     propertyTitle: { type: String, default: "" },
     promotionType: {
       type: String,
-      enum: ["PARTNER_BOOST", "PARTNER_FEATURED", "PARTNER_LOCALITY_TOP", "PROPERTY_BOOST", "FEATURED_7_DAYS", "LOCALITY_TOP_30_DAYS"],
       required: true,
     },
     creditsCharged: { type: Number, default: 0 },

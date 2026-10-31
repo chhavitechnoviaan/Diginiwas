@@ -24,7 +24,7 @@ const ownsProperty = (req, property) =>
 export async function createSellerBoostRequest(req, res) {
   try {
     const { propertyId, promotionType, message = "" } = req.body;
-    if (!mongoose.isValidObjectId(propertyId) || !allowed.has(promotionType)) return error(res, 400, "Valid propertyId and promotionType required");
+    if (!mongoose.isValidObjectId(propertyId) || !(allowed.has(promotionType) || (String(promotionType).startsWith("CUSTOM_") && (await getCreditProduct(promotionType))?.targetType === "PROPERTY"))) return error(res, 400, "Valid propertyId and promotionType required");
     const property = await Property.findById(propertyId);
     if (!property) return error(res, 404, "Property not found");
     if (!ownsProperty(req, property)) return error(res, 403, "Only the property seller can request a boost");
@@ -36,7 +36,7 @@ export async function createSellerBoostRequest(req, res) {
     if (!plan) return error(res, 400, "Credit plan is unavailable");
     const prior = await SellerBoostRequest.findOne({ propertyId: property._id, promotionType, status: { $in: ["PendingPartner", "Processing", "PendingAdmin", "Approved"] } });
     if (prior) return error(res, 409, "An active or pending request for this boost already exists");
-    const request = await SellerBoostRequest.create({ sellerId: req.user.id, propertyId, partnerId: partner._id, promotionType, message: String(message).slice(0,1000), creditPriceAtRequest: plan.credits });
+    const request = await SellerBoostRequest.create({ sellerId: req.user.id, propertyId, partnerId: partner._id, promotionType, message: String(message).slice(0,1000), creditPriceAtRequest: plan.credits, planSnapshot:{name:plan.name||plan.label,durationDays:plan.durationDays,placement:plan.placement||"BOOST"} });
     await notifyUser({ userId: partner._id, userRole: "partner", title: "Seller requested property boost", message: `A seller has requested ${promotionType} for ${property.title}.`, type: "SELLER_BOOST_REQUEST", entityType: "SellerBoostRequest", entityId: request._id, actionUrl: `/seller-boost-requests/${request._id}`, eventKey: `seller-boost:${request._id}:created` });
     await notifyAdmins({ title: "Seller requested property boost", message: `A seller requested ${promotionType} for ${property.title}; partner approval is pending.`, type: "SELLER_BOOST_REQUEST", entityType: "SellerBoostRequest", entityId: request._id, actionUrl: "/notifications" });
     return res.status(201).json({ success: true, message: "Boost request sent to assigned partner", data: request });

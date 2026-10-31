@@ -1,3 +1,5 @@
+import AllPromotionRequests from "./AllPromotionRequests";
+import CustomPromotionPlans from "./CustomPromotionPlans";
 import {
   useEffect,
   useMemo,
@@ -847,6 +849,7 @@ export default function CreditPricingManagement() {
                 }
               />
 
+              {group.id === "locality" && <AllPromotionRequests/>}
               <div className="mt-3 grid gap-4 lg:grid-cols-2">
                 {groupProducts.map(
                   (
@@ -870,6 +873,8 @@ export default function CreditPricingManagement() {
           );
         }
       )}
+
+      <CustomPromotionPlans/>
 
       {/* ============================= */}
       {/* SAVE FOOTER */}

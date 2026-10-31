@@ -486,8 +486,7 @@
 //     },
 //     promotionType: {
 //       type: String,
-//       enum: ["PROPERTY_BOOST", "FEATURED_7_DAYS", "LOCALITY_TOP_30_DAYS"],
-//     },
+// //     },
 //     action: {
 //       type: String,
 //       enum: ["Approved", "Rejected", "Expired", "Disabled"],
@@ -1141,7 +1140,6 @@ const propertySchema = new mongoose.Schema(
         partnerName: { type: String, default: "" },
         promotionType: {
           type: String,
-          enum: ["PROPERTY_BOOST", "FEATURED_7_DAYS", "LOCALITY_TOP_30_DAYS"],
           required: true,
         },
         creditsCharged: { type: Number, default: 0 },
@@ -1167,7 +1165,6 @@ const propertySchema = new mongoose.Schema(
     },
     promotionType: {
       type: String,
-      enum: ["PROPERTY_BOOST", "FEATURED_7_DAYS", "LOCALITY_TOP_30_DAYS"],
     },
     action: {
       type: String,

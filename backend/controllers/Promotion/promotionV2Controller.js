@@ -63,17 +63,18 @@ const setPromotionActive = (target, request, expiresAt) => {
     transactionId: request.debitTransactionId,
     partnerId: request.partnerMongoId,
   };
-  if (["PARTNER_BOOST", "PROPERTY_BOOST"].includes(request.promotionType)) target.promotions.boost = value;
-  if (["PARTNER_FEATURED", "FEATURED_7_DAYS"].includes(request.promotionType)) target.promotions.featured = value;
-  if (["PARTNER_LOCALITY_TOP", "LOCALITY_TOP_30_DAYS"].includes(request.promotionType)) {
+  const placement=request.planSnapshot?.placement;
+  if (placement === "BOOST" || (!placement && ["PARTNER_BOOST", "PROPERTY_BOOST"].includes(request.promotionType))) target.promotions.boost = value;
+  if (placement === "FEATURED" || (!placement && ["PARTNER_FEATURED", "FEATURED_7_DAYS"].includes(request.promotionType))) target.promotions.featured = value;
+  if (placement === "LOCALITY_TOP" || (!placement && ["PARTNER_LOCALITY_TOP", "LOCALITY_TOP_30_DAYS"].includes(request.promotionType))) {
     target.promotions.localityTop = { ...value, locality: request.locality || target.location?.city || "" };
   }
 };
 
 const deactivatePromotion = (target, request) => {
-  const key = ["PARTNER_BOOST", "PROPERTY_BOOST"].includes(request.promotionType)
+  const key = (request.planSnapshot?.placement === "BOOST" || ["PARTNER_BOOST", "PROPERTY_BOOST"].includes(request.promotionType))
     ? "boost"
-    : ["PARTNER_FEATURED", "FEATURED_7_DAYS"].includes(request.promotionType)
+    : (request.planSnapshot?.placement === "FEATURED" || ["PARTNER_FEATURED", "FEATURED_7_DAYS"].includes(request.promotionType))
       ? "featured"
       : "localityTop";
   if (String(target.promotions?.[key]?.requestId || "") === String(request._id)) {
@@ -86,7 +87,9 @@ export const createPromotionRequest = async (req, res) => {
   try {
     const partnerId = req.body.partnerId || req.user?.id;
     const targetType = String(req.body.targetType || (req.body.propertyId ? "PROPERTY" : "PARTNER")).toUpperCase();
-    const promotionType = normalizePromotion(targetType, req.body.promotionType);
+    const rawCode = String(req.body.promotionType || req.body.planCode || "").trim().toUpperCase();
+    const dynamicPlan = rawCode.startsWith("CUSTOM_") ? await getCreditProduct(rawCode) : null;
+    const promotionType = dynamicPlan && dynamicPlan.targetType === targetType ? rawCode : normalizePromotion(targetType, rawCode);
     const remarks = String(req.body.remarks || "").trim();
 
     if (!["PARTNER", "PROPERTY"].includes(targetType)) return res.status(400).json({ success: false, message: "targetType must be PARTNER or PROPERTY" });
@@ -157,6 +160,7 @@ export const createPromotionRequest = async (req, res) => {
         city: targetType === "PROPERTY" ? property?.city || "" : partner.location?.city || "",
         promotionType,
         creditsCharged: plan.credits,
+        planSnapshot: {name:plan.label||plan.name, durationDays:plan.durationDays, placement:plan.placement || (promotionType.includes("LOCALITY_TOP")?"LOCALITY_TOP":promotionType.includes("FEATURED")?"FEATURED":"BOOST"), features:plan.features||[]},
         debitTransactionId: debitResult.transaction._id,
         requestedBy: actor,
         history: [{ status: "Pending", remarks: remarks || `${plan.label} requested`, actor }],
@@ -257,8 +261,8 @@ export const approvePromotionRequest = async (req, res) => {
       target = request.targetType === "PROPERTY" ? await Property.findById(request.propertyMongoId).session(session) : partner;
       if (!target) throw Object.assign(new Error(`${request.targetType} target not found`), { http: 404 });
       if (request.targetType === "PROPERTY" && (target.status !== "Live" || target.propertyVerificationStatus !== "Verified")) throw Object.assign(new Error("Property is no longer Live and Verified"), { http: 400 });
-      const plan = await getCreditProduct(request.promotionType);
-      if (!plan) throw Object.assign(new Error("Promotion pricing is inactive or missing"), { http: 400 });
+      const plan = request.planSnapshot?.durationDays ? request.planSnapshot : await getCreditProduct(request.promotionType);
+      if (!plan) throw Object.assign(new Error("Promotion duration is unavailable"), { http: 400 });
       const now = new Date();
       const expiresAt = plan.durationDays ? new Date(now.getTime() + Number(plan.durationDays) * 86400000) : null;
       setPromotionActive(target, request, expiresAt);
@@ -268,18 +272,18 @@ export const approvePromotionRequest = async (req, res) => {
       request.history.push({ status: "Approved", remarks: request.adminRemarks || "Approved by admin", actor: adminActor(req) });
       await request.save({ session });
 
-      const partnerSnapshot = partner.promotionRequests.find((x) => String(x.requestId) === String(request._id));
+      const partnerSnapshot = (partner.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
       if (partnerSnapshot) { partnerSnapshot.status = "Approved"; partnerSnapshot.approvedAt = now; partnerSnapshot.expiresAt = expiresAt; partnerSnapshot.adminRemarks = request.adminRemarks; }
-      partner.promotionStats.pendingRequests = decrement(partner.promotionStats.pendingRequests);
+      partner.promotionStats = partner.promotionStats || {}; partner.promotionStats.pendingRequests = decrement(partner.promotionStats.pendingRequests);
       partner.promotionStats.approvedRequests = Number(partner.promotionStats.approvedRequests || 0) + 1;
       partner.promotionStats.totalPromotionCreditsSpent = Number(partner.promotionStats.totalPromotionCreditsSpent || 0) + Number(request.creditsCharged || 0);
-      partner.promotionHistory.push({ requestId: request._id, targetType: request.targetType, promotionType: request.promotionType, action: "Approved", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
+      partner.promotionHistory = partner.promotionHistory || []; partner.promotionHistory.push({ requestId: request._id, targetType: request.targetType, promotionType: request.promotionType, action: "Approved", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
       await partner.save({ session });
 
       if (request.targetType === "PROPERTY") {
-        const snap = target.promotionRequests.find((x) => String(x.requestId) === String(request._id));
+        const snap = (target.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
         if (snap) { snap.status = "Approved"; snap.approvedAt = now; snap.expiresAt = expiresAt; snap.adminRemarks = request.adminRemarks; }
-        target.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Approved", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
+        target.promotionHistory = target.promotionHistory || []; target.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Approved", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
         await target.save({ session });
       }
     });
@@ -326,20 +330,20 @@ export const rejectPromotionRequest = async (req, res) => {
       await request.save({ session });
       const partner = await Partner.findById(request.partnerMongoId).session(session);
       if (partner) {
-        const snap = partner.promotionRequests.find((x) => String(x.requestId) === String(request._id));
+        const snap = (partner.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
         if (snap) { snap.status = "Rejected"; snap.rejectedAt = now; snap.adminRemarks = request.adminRemarks; }
-        partner.promotionStats.pendingRequests = decrement(partner.promotionStats.pendingRequests);
+        partner.promotionStats = partner.promotionStats || {}; partner.promotionStats.pendingRequests = decrement(partner.promotionStats.pendingRequests);
         partner.promotionStats.rejectedRequests = Number(partner.promotionStats.rejectedRequests || 0) + 1;
         partner.promotionStats.totalPromotionCreditsRefunded = Number(partner.promotionStats.totalPromotionCreditsRefunded || 0) + Number(request.creditsCharged || 0);
-        partner.promotionHistory.push({ requestId: request._id, targetType: request.targetType, promotionType: request.promotionType, action: "Rejected", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
+        partner.promotionHistory = partner.promotionHistory || []; partner.promotionHistory.push({ requestId: request._id, targetType: request.targetType, promotionType: request.promotionType, action: "Rejected", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
         await partner.save({ session });
       }
       if (request.targetType === "PROPERTY") {
         const property = await Property.findById(request.propertyMongoId).session(session);
         if (property) {
-          const snap = property.promotionRequests.find((x) => String(x.requestId) === String(request._id));
+          const snap = (property.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
           if (snap) { snap.status = "Rejected"; snap.rejectedAt = now; snap.adminRemarks = request.adminRemarks; }
-          property.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Rejected", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
+          property.promotionHistory = property.promotionHistory || []; property.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Rejected", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
           await property.save({ session });
         }
       }
@@ -365,16 +369,16 @@ export const expirePromotions = async (_req, res) => {
       const target = request.targetType === "PROPERTY" ? await Property.findById(request.propertyMongoId) : partner;
       if (target) deactivatePromotion(target, request);
       if (partner) {
-        const snap = partner.promotionRequests.find((x) => String(x.requestId) === String(request._id));
+        const snap = (partner.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
         if (snap) snap.status = "Expired";
         partner.promotionStats.expiredRequests = Number(partner.promotionStats.expiredRequests || 0) + 1;
-        partner.promotionHistory.push({ requestId: request._id, targetType: request.targetType, promotionType: request.promotionType, action: "Expired", credits: request.creditsCharged, actor: { name: "System", role: "System" }, remarks: "Promotion expired automatically" });
+        partner.promotionHistory = partner.promotionHistory || []; partner.promotionHistory.push({ requestId: request._id, targetType: request.targetType, promotionType: request.promotionType, action: "Expired", credits: request.creditsCharged, actor: { name: "System", role: "System" }, remarks: "Promotion expired automatically" });
         await partner.save();
       }
       if (request.targetType === "PROPERTY" && target) {
-        const snap = target.promotionRequests.find((x) => String(x.requestId) === String(request._id));
+        const snap = (target.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
         if (snap) snap.status = "Expired";
-        target.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Expired", credits: request.creditsCharged, actor: { name: "System", role: "System" }, remarks: "Promotion expired automatically" });
+        target.promotionHistory = target.promotionHistory || []; target.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Expired", credits: request.creditsCharged, actor: { name: "System", role: "System" }, remarks: "Promotion expired automatically" });
         await target.save();
       }
       request.status = "Expired";

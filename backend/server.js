@@ -35,6 +35,7 @@ import leadRoutes from "./routes/Lead/leadroutes.js";
 import savedPropertyRoutes from "./routes/buyer/savedPropertyRoutes.js";
 import creditRoutes from "./routes/Credit/creditRoutes.js";
 import promotionRoutes from "./routes/Promotion/promotionRoutes.js";
+import promotionPlanRoutes from "./routes/Promotion/promotionPlanRoutes.js";
 import propertyPublishingRoutes from "./routes/Property/propertyPublishingRoutes.js";
 import boostDashboardRoutes from "./routes/Promotion/boostDashboardRoutes.js";
 import creditSettingRoutes from "./routes/Credit/creditSettingRoutes.js";
@@ -124,6 +125,7 @@ const mountApiRoutes = (basePath) => {
   app.use(`${basePath}/credit-settings`, creditSettingRoutes);
   app.use(`${basePath}/loan-enquiries`, loanEnquiryRoutes);
   app.use(`${basePath}/promotions`, promotionRoutes);
+  app.use(`${basePath}/promotion-plans`, promotionPlanRoutes);
   app.use(`${basePath}/boost-operations`, boostDashboardRoutes);
   app.use(`${basePath}/property-publishing`, propertyPublishingRoutes);
   app.use(`${basePath}/leads`, leadRoutes);
