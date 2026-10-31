@@ -820,7 +820,7 @@ export default function CreditPricingManagement() {
       {/* SERVICE GROUPS */}
       {/* ============================= */}
 
-      {PRODUCT_GROUPS.map(
+      {/* {PRODUCT_GROUPS.map(
         (group) => {
           const groupProducts =
             group.items
@@ -872,7 +872,7 @@ export default function CreditPricingManagement() {
             </div>
           );
         }
-      )}
+      )} */}
 
       <CustomPromotionPlans/>
 

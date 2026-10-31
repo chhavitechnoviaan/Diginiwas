@@ -1,11 +1,146 @@
-import {useEffect,useState} from 'react';
-import axios from 'axios';
-const base=(import.meta.env.VITE_API_BASE_URL||'http://localhost:5000/api').replace(/\/$/,'');
-const auth=()=>({headers:{Authorization:`Bearer ${localStorage.getItem('token')||''}`}});
-export default function AllPromotionRequests(){
- const [items,setItems]=useState([]),[error,setError]=useState(''),[busy,setBusy]=useState(''),[status,setStatus]=useState('Pending');
- const reload=async()=>{try{const r=await axios.get(`${base}/promotions?limit=100${status?`&status=${status}`:''}`,auth());const d=r.data?.data;setItems(Array.isArray(d)?d:Array.isArray(d?.requests)?d.requests:Array.isArray(d?.items)?d.items:[]);setError('')}catch(e){setError(e.response?.data?.message||e.message)}};
- useEffect(()=>{reload()},[status]);
- const decision=async(p,choice)=>{const remarks=window.prompt(choice==='reject'?'Reason for rejection (credits will be refunded)':'Admin remarks','');if(remarks===null)return;setBusy(p._id);try{await axios.patch(`${base}/promotions/${p._id}/${choice}`,{remarks},auth());await reload()}catch(e){setError(e.response?.data?.error||e.response?.data?.message||e.message)}finally{setBusy('')}};
- return <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-bold text-slate-800">All Promotion Requests</h3><select value={status} onChange={e=>setStatus(e.target.value)} className="rounded border p-2"><option value="Pending">Pending</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option><option value="All">All</option></select></div><p className="mt-1 text-xs text-slate-500">Partner profile, property and Admin-created plan requests. Seller requests appear here after Partner approval.</p>{error&&<p className="my-3 text-red-600" role="alert">{error}</p>}<div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-100"><tr>{['Partner','Target','Plan code','Credits','Status','Action'].map(x=><th key={x} className="p-3">{x}</th>)}</tr></thead><tbody>{items.map(p=><tr key={p._id} className="border-b"><td className="p-3">{p.partnerName||p.partnerCode}</td><td className="p-3">{p.propertyTitle||p.targetType}</td><td className="p-3">{p.planSnapshot?.name||p.promotionType}</td><td className="p-3">{p.creditsCharged}</td><td className="p-3">{p.status}</td><td className="p-3">{p.status==='Pending'?<div className="flex gap-2"><button disabled={Boolean(busy)} onClick={()=>decision(p,'approve')} className="rounded bg-emerald-700 px-3 py-2 text-white">Approve</button><button disabled={Boolean(busy)} onClick={()=>decision(p,'reject')} className="rounded bg-rose-600 px-3 py-2 text-white">Reject</button></div>:'—'}</td></tr>)}</tbody></table>{items.length===0&&<p className="p-4 text-slate-500">No requests found.</p>}</div></div>
+import { useEffect, useState } from "react";
+import axios from "axios";
+const base = (
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"
+).replace(/\/$/, "");
+const auth = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+});
+export default function AllPromotionRequests() {
+  const [items, setItems] = useState([]),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(""),
+    [status, setStatus] = useState("Pending");
+  const reload = async () => {
+    try {
+      const r = await axios.get(
+        `${base}/promotions?limit=100${status ? `&status=${status}` : ""}`,
+        auth(),
+      );
+      const d = r.data?.data;
+      setItems(
+        Array.isArray(d)
+          ? d
+          : Array.isArray(d?.requests)
+            ? d.requests
+            : Array.isArray(d?.items)
+              ? d.items
+              : [],
+      );
+      setError("");
+    } catch (e) {
+      setError(e.response?.data?.message || e.message);
+    }
+  };
+  useEffect(() => {
+    reload();
+  }, [status]);
+  const decision = async (p, choice) => {
+    const remarks = window.prompt(
+      choice === "reject"
+        ? "Reason for rejection (credits will be refunded)"
+        : "Admin remarks",
+      "",
+    );
+    if (remarks === null) return;
+    setBusy(p._id);
+    try {
+      await axios.patch(
+        `${base}/promotions/${p._id}/${choice}`,
+        { remarks },
+        auth(),
+      );
+      await reload();
+    } catch (e) {
+      setError(
+        e.response?.data?.error || e.response?.data?.message || e.message,
+      );
+    } finally {
+      setBusy("");
+    }
+  };
+  return (
+    <div className="mt-5 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-bold text-slate-800">All Promotion Requests</h3>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="rounded border p-2"
+        >
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+          <option value="All">All</option>
+        </select>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        Partner profile, property and Admin-created plan requests. Seller
+        requests appear here after Partner approval.
+      </p>
+      {error && (
+        <p className="my-3 text-red-600" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-100">
+            <tr>
+              {[
+                "Partner",
+                "Target",
+                "Plan code",
+                "Credits",
+                "Status",
+                "Action",
+              ].map((x) => (
+                <th key={x} className="p-3">
+                  {x}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((p) => (
+              <tr key={p._id} className="border-b">
+                <td className="p-3">{p.partnerName || p.partnerCode}</td>
+                <td className="p-3">{p.propertyTitle || p.targetType}</td>
+                <td className="p-3">
+                  {p.planSnapshot?.name || p.promotionType}
+                </td>
+                <td className="p-3">{p.creditsCharged}</td>
+                <td className="p-3">{p.status}</td>
+                <td className="p-3">
+                  {p.status === "Pending" ? (
+                    <div className="flex gap-2">
+                      <button
+                        disabled={Boolean(busy)}
+                        onClick={() => decision(p, "approve")}
+                        className="rounded bg-emerald-700 px-3 py-2 text-white"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        disabled={Boolean(busy)}
+                        onClick={() => decision(p, "reject")}
+                        className="rounded bg-rose-600 px-3 py-2 text-white"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    "—"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {items.length === 0 && (
+          <p className="p-4 text-slate-500">No requests found.</p>
+        )}
+      </div>
+    </div>
+  );
 }
