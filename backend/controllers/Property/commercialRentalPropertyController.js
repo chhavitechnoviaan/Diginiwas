@@ -1,5 +1,5 @@
 import CommercialRentalProperty, { COMMERCIAL_RENTAL_ENUMS } from "../../models/CommercialRentalProperty.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 const parse = (value, fallback) => {
   if (value === undefined || value === null || value === "") return fallback;

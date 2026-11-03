@@ -1,5 +1,5 @@
 import AgentCorner from "../../models/AgentCornerStats.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 // Get
 export const getAgentCorner = async (req, res) => {

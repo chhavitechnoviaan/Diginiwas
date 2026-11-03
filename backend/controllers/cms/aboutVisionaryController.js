@@ -1,5 +1,5 @@
 import AboutVisionary from "../../models/AboutVisionary.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 // ================= GET =================
 

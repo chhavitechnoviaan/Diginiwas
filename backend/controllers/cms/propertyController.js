@@ -1,6 +1,6 @@
 import Property from "../../models/Property.js";
 import generatePropertyId from "../../utils/generatePropertyId.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 export const addProperty = async (req, res) => {
   try {
@@ -158,23 +158,18 @@ export const getAllPropertiesbyfilter = async (req, res) => {
   
       Object.assign(property, req.body);
   
-      if (req.files && req.files.length > 0) {
-        const uploadedImages = [];
-  
-        for (const file of req.files) {
-          const result = await cloudinary.uploader.upload(file.path, {
-            folder: "diginiwas/properties",
-          });
-  
-          uploadedImages.push({
-            url: result.secure_url,
-            public_id: result.public_id,
-          });
-        }
-  
-        property.images = uploadedImages;
+      // Multer storage has already uploaded these files to Firebase Storage.
+      // Do not call cloudinary.uploader.upload() on a remote download URL.
+      const uploadedFiles = Array.isArray(req.files)
+        ? req.files.filter((file) => file.fieldname === "images")
+        : (req.files?.images || []);
+      if (uploadedFiles.length) {
+        property.images = uploadedFiles.map(file => ({
+          url: file.path,
+          public_id: file.filename,
+        }));
       }
-  
+
       await property.save();
   
       res.status(200).json({

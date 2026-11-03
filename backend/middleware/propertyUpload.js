@@ -1,34 +1,11 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary.js";
+import { firebaseMulterStorage } from "./firebaseMulterStorage.js";
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => {
-    if (file.fieldname === "images") {
-      return {
-        folder: "diginiwas/properties/images",
-        resource_type: "image",
-        allowed_formats: ["jpg", "jpeg", "png", "webp"],
-        public_id: `property-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
-      };
-    }
-
-    if (file.fieldname === "video") {
-      return {
-        folder: "diginiwas/properties/videos",
-        resource_type: "video",
-        public_id: `video-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
-      };
-    }
-
-    return {
-      folder: "diginiwas/properties/documents",
-      resource_type: "raw",
-      public_id: `document-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
-    };
-  },
-});
+const storage = firebaseMulterStorage({ folder: (_req, file) => {
+  if (file.fieldname === "images") return "diginiwas/properties/images";
+  if (file.fieldname === "video") return "diginiwas/properties/videos";
+  return "diginiwas/properties/documents";
+}});
 
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === "images") {

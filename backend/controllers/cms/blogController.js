@@ -1,5 +1,5 @@
 import BlogPage from "../../models/BlogPage.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 /* ==========================================================
    CLOUDINARY HELPERS

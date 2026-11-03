@@ -1,5 +1,5 @@
 import Testimonial from "../../models/Testimonial.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 /* ===========================
    Add Testimonial

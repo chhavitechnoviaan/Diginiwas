@@ -1,5 +1,5 @@
 import AboutGenesis from "../../models/AboutGenesis.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 // ================= GET =================
 

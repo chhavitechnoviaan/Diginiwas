@@ -1,5 +1,5 @@
 import AgentNetwork from "../../models/AgentNetwork.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 export const getAgentNetwork = async (req, res) => {
     try {

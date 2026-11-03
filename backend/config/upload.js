@@ -1,97 +1,10 @@
 import multer from "multer";
-import {
-  CloudinaryStorage,
-} from "multer-storage-cloudinary";
+import { firebaseMulterStorage } from "../middleware/firebaseMulterStorage.js";
 
-import cloudinary from "./cloudinary.js";
+const storage = firebaseMulterStorage({ folder: (_req, file) => {
+  if (file.fieldname === "video") return "diginiwas/properties/videos";
+  if (["floorPlan", "reraCertificate"].includes(file.fieldname)) return "diginiwas/properties/documents";
+  return "diginiwas/properties/images";
+}});
 
-
-const storage =
-  new CloudinaryStorage({
-    cloudinary,
-
-    params: async (
-      req,
-      file
-    ) => {
-      let folder =
-        "diginiwas/properties";
-
-      let resourceType =
-        "image";
-
-      // ==========================================
-      // VIDEO
-      // ==========================================
-
-      if (
-        file.fieldname ===
-        "video"
-      ) {
-        folder =
-          "diginiwas/properties/videos";
-
-        resourceType =
-          "video";
-      }
-
-      // ==========================================
-      // PDF / DOCUMENTS
-      // ==========================================
-
-      if (
-        file.fieldname ===
-          "floorPlan" ||
-        file.fieldname ===
-          "reraCertificate"
-      ) {
-        folder =
-          "diginiwas/properties/documents";
-
-        resourceType =
-          "raw";
-      }
-
-      return {
-        folder,
-
-        resource_type:
-          resourceType,
-
-        allowed_formats:
-          file.fieldname ===
-          "images"
-            ? [
-                "jpg",
-                "jpeg",
-                "png",
-                "webp",
-              ]
-            : undefined,
-
-        public_id:
-          `${Date.now()}-${file.originalname
-            .split(".")[0]
-            .replace(
-              /\s+/g,
-              "-"
-            )}`,
-      };
-    },
-  });
-
-
-const upload =
-  multer({
-    storage,
-
-    limits: {
-      fileSize:
-        20 *
-        1024 *
-        1024,
-    },
-  });
-
-
-export default upload;
+export default multer({storage, limits: {fileSize: 100 * 1024 * 1024, files: 35}});

@@ -1,5 +1,5 @@
 import RoundSection from "../../models/RoundSection.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 export const saveRoundSection = async (req, res) => {
   try {

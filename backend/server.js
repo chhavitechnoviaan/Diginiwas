@@ -163,7 +163,7 @@ app.use((error, req, res, next) => {
       return res.status(413).json({
         success: false,
         code: error.code,
-        message: "Uploaded file is too large. Maximum allowed size is 100 MB. For videos, use the Cloudinary video URL field instead.",
+        message: "Uploaded file is too large. Maximum allowed size is 100 MB. For larger videos, use a resumable upload workflow instead.",
       });
     }
 

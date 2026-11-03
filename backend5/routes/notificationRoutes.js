@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { protect } from "../middleware/authMiddleware.js";
+import { listNotifications, markRead, markAllRead, deleteNotification, clearNotifications } from "../controllers/notificationController.js";
+const router = Router();
+router.use(protect);
+router.get("/", listNotifications);
+router.patch("/read-all", markAllRead);
+router.patch("/:id/read", markRead);
+router.delete("/clear", clearNotifications);
+router.delete("/:id", deleteNotification);
+export default router;

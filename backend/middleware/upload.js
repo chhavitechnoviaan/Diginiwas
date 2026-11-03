@@ -1,37 +1,13 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../config/cloudinary.js";
+import { firebaseMulterStorage } from "./firebaseMulterStorage.js";
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => {
-    if (file.fieldname === "images") {
-      return {
-        folder: "properties/images",
-        resource_type: "image",
-        allowed_formats: ["jpg", "jpeg", "png", "webp"],
-      };
-    }
+const storage = firebaseMulterStorage({ folder: (_req, file) => {
+  if (file.fieldname === "images") return "diginiwas/properties/images";
+  if (["floorPlan", "reraCertificate"].includes(file.fieldname)) return "diginiwas/properties/documents";
+  if (file.fieldname === "video") return "diginiwas/properties/videos";
+  return "diginiwas/cms/images";
+}});
 
-    if (file.fieldname === "floorPlan" || file.fieldname === "reraCertificate") {
-      return {
-        folder: "properties/documents",
-        resource_type: "raw",
-        allowed_formats: ["pdf"],
-      };
-    }
-
-    if (file.fieldname === "video") {
-      return {
-        folder: "properties/videos",
-        resource_type: "video",
-      };
-    }
-
-    return { folder: "properties/misc", resource_type: "auto" };
-  },
-});
-
-const upload = multer({ storage });
+const upload = multer({ storage, limits: {fileSize: 100 * 1024 * 1024, files: 35} });
 
 export default upload;

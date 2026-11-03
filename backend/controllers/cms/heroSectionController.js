@@ -1,5 +1,5 @@
 import HeroSection from "../../models/HeroSection.js";
-import cloudinary from "../../config/cloudinary.js";
+import cloudinary from "../../services/firebaseMediaStorage.js";
 
 export const saveHeroSection = async (req, res) => {
   try {
