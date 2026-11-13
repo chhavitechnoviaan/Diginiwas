@@ -961,7 +961,7 @@ export const createVisitRequest = async (req, res) => {
     if (teamOwner) {
       await notifyMany([{ userId: teamOwner._id, userRole: "partner" }], { title: "Team Visit Needs Review", message: `A visit request for ${(property.title || property.projectName || "property")} requires your review.`, type: "TEAM_VISIT_REVIEW", entityType: "Visit", entityId: visit._id, actionUrl: `/visits/${visit._id}`, eventKey: `visit:${visit._id}:team-review` });
     } else {
-      await notifyAdmins({ title: "Visit Request Pending", message: `A visit request requires review.`, type: "VISIT_REQUEST", entityType: "Visit", entityId: visit._id, actionUrl: `/admin/visits/${visit._id}` });
+      await notifyAdmins({ title: "Visit Request Pending", message: `A visit request requires review.`, type: "VISIT_REQUEST", entityType: "Visit", entityId: visit._id, actionUrl: `/partnerdashboard?tab=visit&visitId=${visit._id}` });
     }
     return res.status(201).json({
       success: true,
