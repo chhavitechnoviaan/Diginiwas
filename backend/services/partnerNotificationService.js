@@ -1,3 +1,4 @@
+import { makeAccountWelcomeEmail } from "./accountWelcomeEmailTemplate.js";
 import nodemailer from "nodemailer";
 import { sendMsg91FlowOtp } from "./msg91Service.js";
 
@@ -21,19 +22,20 @@ export const sendEmailOtp = async ({ to, name, otp }) => {
   });
 };
 
-export const sendPartnerCredentials = async ({ to, name, partnerId, temporaryPassword }) => {
+// Existing callers can keep using this export. It now sends a welcome message
+// without exposing Partner ID, login email or temporary password.
+export const sendPartnerCredentials = async ({ to, name }) => {
   if (!process.env.SMTP_HOST) {
-    console.log(`[DEV PARTNER LOGIN] ${to}: ${temporaryPassword}`);
+    console.warn("[PARTNER WELCOME EMAIL] SMTP_HOST not configured; email not sent.");
     return;
   }
+  const content = makeAccountWelcomeEmail({ name, role: "partner" });
   await transporter().sendMail({
     from: process.env.MAIL_FROM || process.env.SMTP_USER,
     to,
-    subject: "Your DigiNiwas Partner account is approved",
-    html: `<div style="font-family:Arial;color:#173247;line-height:1.6"><h2 style="color:#005F56">Welcome to DigiNiwas</h2><p>Hello ${name},</p><p>Your partner application has been approved.</p><p><b>Partner ID:</b> ${partnerId}</p><p><b>Login ID:</b> ${to}</p><p><b>Temporary Password:</b> ${temporaryPassword}</p><p>You must change this password after first login.</p></div>`,
+    ...content,
   });
 };
-
 
 export const sendMobileOtp = async ({ phone, otp, name = "Partner" }) => {
   return sendMsg91FlowOtp({ phone, otp, name });

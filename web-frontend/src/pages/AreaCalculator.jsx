@@ -145,73 +145,65 @@ export default function AreaCalculator() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F9FA] text-[#102E46]">
-      <section className="bg-[#274255] px-4 pb-12 pt-8 text-white sm:px-8 sm:pb-16 lg:px-14">
-        <div className="mx-auto max-w-[1280px] rounded-[30px] bg-[#081522] px-5 py-7 shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:px-8 sm:py-10 lg:px-10">
-          <div className="grid gap-8 lg:grid-cols-[1fr_480px] lg:items-center">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#33CC99]">DigiNiwas Tools</p>
-              <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Area Converter</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-[#AFC2CC] sm:text-base">
-                Quickly convert property area units used across India. Get accurate, reliable conversions for real estate, investments, and property documents.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {[
-                  ["Property listings", FileText],
-                  ["Land records", MapPinned],
-                  ["Investment planning", Sparkles],
-                ].map(([label, Icon]) => (
-                  <span key={label} className="inline-flex items-center gap-2 rounded-full border border-[#294554] bg-[#102333] px-3 py-2 text-[10px] font-bold text-[#B8C9D0]">
-                    <Icon size={13} className="text-[#33CC99]" /> {label}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-[#274354] bg-[#102333] p-5 shadow-xl">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#173A45] text-[#33CC99]"><Calculator size={19} /></span>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#8199A5]">India · General</p>
-                  <p className="text-sm font-black text-white">Convert Area</p>
-                </div>
-              </div>
-
-              <div className="mt-5">
-                <label className="text-[10px] font-black uppercase tracking-wider text-[#91A9B4]">Value</label>
-                <input
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  type="number"
-                  min="0"
-                  className="mt-2 h-12 w-full rounded-xl border border-[#315161] bg-[#0B1C29] px-4 text-base font-bold text-white outline-none placeholder:text-[#637B87] focus:border-[#33CC99]"
-                  placeholder="Enter area"
-                />
-              </div>
-
-              <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-                <UnitSelect label="From" value={from} onChange={setFrom} dark />
-                <button type="button" onClick={swap} className="mb-1 flex h-9 w-9 items-center justify-center rounded-full bg-[#173A45] text-[#33CC99] transition hover:bg-[#20505A]" aria-label="Swap units">
-                  <ArrowLeftRight size={15} />
-                </button>
-                <UnitSelect label="To" value={to} onChange={setTo} dark />
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-[#235A5A] bg-[#0B1C29] p-4">
-                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#6FE2C0]">Converted Result</p>
-                <p className="mt-1 text-2xl font-black text-white">{format(result)} {toName}</p>
-                <p className="mt-1 text-[10px] text-[#8199A5]">{format(Number(value) || 0)} {fromName} converted to {toName}</p>
-                <button type="button" onClick={copyResult} className="mt-3 inline-flex items-center gap-2 text-[10px] font-black text-[#33CC99]">
-                  {copied ? <CheckCircle2 size={13} /> : <Copy size={13} />}
-                  {copied ? "Result copied" : "Copy Result"}
-                </button>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#F3F7F7] text-[#15364A]">
+      <section className="relative overflow-hidden bg-gradient-to-r from-[#11354B] via-[#1B4C55] to-[#047E69] px-5 pb-24 pt-14 text-white lg:pb-28 lg:pt-20">
+        <div className="pointer-events-none absolute -right-20 -top-32 h-96 w-96 rounded-full border-[64px] border-white/5" />
+        <div className="pointer-events-none absolute bottom-0 left-1/3 h-44 w-44 rounded-full bg-[#3FE5B4]/10 blur-3xl" />
+        <div className="relative mx-auto max-w-6xl">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#80EACB]/40 bg-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-[.16em] text-[#8FF8D9]">
+            <Sparkles size={14}/> DigiNiwas property tools
+          </span>
+          <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">Every area, <span className="text-[#6DE8BE]">perfectly converted.</span></h1>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/75">Instantly convert property and land measurements across India. One simple tool for homes, plots, investments and property documents.</p>
         </div>
       </section>
 
-      <main className="mx-auto max-w-[1280px] px-4 py-10 sm:px-8 lg:px-10">
+      <div className="relative mx-auto -mt-16 grid max-w-6xl items-stretch gap-5 px-4 lg:grid-cols-[.9fr_1.1fr] lg:gap-8">
+        <aside className="overflow-hidden rounded-[28px] border border-[#DDEBE8] bg-gradient-to-b from-[#EAF9F2] to-white p-7 shadow-[0_16px_60px_rgba(16,53,75,.08)] lg:p-9">
+          <span className="text-[11px] font-black uppercase tracking-[.18em] text-[#0B9878]">DIGINIWAS AREA INTELLIGENCE</span>
+          <h2 className="mt-3 text-3xl font-black leading-tight">Measure with ease.<br/><span className="text-[#0E9C7D]">Decide with confidence.</span></h2>
+          <p className="mt-4 text-sm leading-7 text-[#627A83]">From square feet to acres, switch between the measurements you use every day—without the guesswork.</p>
+          <div className="my-9 flex h-48 items-center justify-center rounded-[25px] bg-gradient-to-br from-[#D7F6E8] to-[#EAF2FF]">
+            <div className="relative flex h-28 w-28 items-center justify-center rounded-[32px] bg-white shadow-xl">
+              <Ruler size={61} strokeWidth={1.4} className="text-[#087E69]"/>
+              <div className="absolute -right-8 -top-5 rounded-2xl bg-[#143D50] p-3 text-white shadow-lg"><ArrowLeftRight size={27}/></div>
+              <div className="absolute -bottom-5 -left-9 rounded-2xl bg-white p-3 text-[#0A9E80] shadow-lg"><MapPinned size={27}/></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[[Ruler,"9 area units"],[ArrowLeftRight,"Instant results"],[MapPinned,"Land & property"],[ShieldCheck,"Clear reference"]].map(([Icon,label])=>(
+              <div key={label} className="rounded-2xl border border-[#D9ECE6] bg-white p-4"><Icon size={20} className="text-[#09A580]"/><p className="mt-2 text-xs font-extrabold">{label}</p></div>
+            ))}
+          </div>
+        </aside>
+
+        <section aria-label="Area conversion calculator" className="rounded-[28px] border border-[#DDE8E9] bg-white p-6 shadow-[0_16px_60px_rgba(16,53,75,.08)] sm:p-9">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-[11px] font-black uppercase tracking-[.18em] text-[#0C9C7A]">Area converter</p><h2 className="mt-1 text-2xl font-black">Convert your area</h2></div>
+            <span className="rounded-xl bg-[#E8F8F1] px-3 py-2 text-xs font-black text-[#0B8F70]">Live result</span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-[#728A91]">Enter a measurement, choose your units and see the result instantly.</p>
+          <div className="mt-8">
+            <label htmlFor="area-converter-value" className="mb-2 block text-xs font-extrabold text-[#365769]">Area value</label>
+            <input id="area-converter-value" value={value} onChange={(e) => setValue(e.target.value)} type="number" min="0" step="any" className="h-14 w-full rounded-xl border border-[#D8E7E7] bg-[#F8FBFB] px-4 text-lg font-extrabold text-[#15364A] outline-none transition focus:border-[#0BA381] focus:ring-4 focus:ring-[#0BA381]/10" placeholder="Enter property area" />
+          </div>
+          <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2 sm:gap-3">
+            <UnitSelect label="Convert from" value={from} onChange={setFrom}/>
+            <button type="button" onClick={swap} className="mb-1 flex h-11 w-11 items-center justify-center rounded-xl border border-[#CBEAE1] bg-[#E8F8F1] text-[#098F71] transition hover:rotate-180 hover:bg-[#D4F3E8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0BA381]" aria-label="Swap area units" title="Swap units"><ArrowLeftRight size={19}/></button>
+            <UnitSelect label="Convert to" value={to} onChange={setTo}/>
+          </div>
+          <div className="mt-7 overflow-hidden rounded-[22px] bg-[#15394C] p-6 text-white">
+            <div className="flex items-center justify-between"><p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#8DEBD0]">Converted result</p><CheckCircle2 size={19} className="text-[#6DE8BE]"/></div>
+            <p className="mt-3 break-words text-3xl font-black leading-tight text-[#6DE8BE] sm:text-4xl">{format(result)}</p>
+            <p className="mt-1 text-sm font-bold text-white">{toName}</p>
+            <div className="my-5 h-px bg-white/15"/>
+            <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-white/70">{format(Number(value) || 0)} {fromName} = {format(result)} {toName}</p><button type="button" onClick={copyResult} className="inline-flex items-center gap-2 rounded-lg bg-[#E3F9F1] px-3 py-2 text-xs font-black text-[#087E69] transition hover:bg-white">{copied ? <CheckCircle2 size={14}/> : <Copy size={14}/>} {copied ? "Copied!" : "Copy result"}</button></div>
+          </div>
+          <div className="mt-5 flex items-start gap-2 rounded-xl border border-[#DDEDE8] bg-[#F6FBF9] p-4"><Info size={16} className="mt-0.5 shrink-0 text-[#0D9B78]"/><p className="text-xs leading-5 text-[#607B84]">Calculations use standard unit factors. Bigha and other regional land units can vary by state—confirm local records for official use.</p></div>
+        </section>
+      </div>
+
+      <main className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
         <section>
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -274,15 +266,15 @@ export default function AreaCalculator() {
           ))}
         </section>
 
-        <section className="mt-10 rounded-[26px] bg-[#274255] p-6 text-white shadow-[0_20px_50px_rgba(16,46,70,0.12)] sm:p-8">
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#33CC99]">Understanding the calculation</p>
+        <section className="mt-10 rounded-[26px] bg-gradient-to-r from-[#15394C] to-[#087C6B] p-6 text-white shadow-[0_20px_50px_rgba(16,46,70,0.12)] sm:p-8">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#6DE8BE]">Understanding the calculation</p>
           <h2 className="mt-2 text-2xl font-black">How Area Conversion Works</h2>
-          <p className="mt-3 max-w-4xl text-sm leading-7 text-[#B9C9D0]">
+          <p className="mt-3 max-w-4xl text-sm leading-7 text-white/75">
             Choose the unit you want to convert from, choose the target unit, enter the area and the converter calculates the result using the relevant conversion factor. You can swap the units with one click or copy the result for quick sharing.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-[#38586A] bg-[#081522] p-5"><p className="text-[10px] font-black uppercase tracking-wider text-[#33CC99]">Formula</p><p className="mt-2 text-lg font-black">Value in target unit = Value in source unit × Conversion Factor</p></div>
-            <div className="rounded-2xl border border-[#38586A] bg-[#081522] p-5"><p className="text-[10px] font-black uppercase tracking-wider text-[#33CC99]">Example</p><p className="mt-2 text-sm leading-6 text-[#B9C9D0]">10 Square Meters × 10.7639 = 107.639 Square Feet.</p></div>
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-5"><p className="text-[10px] font-black uppercase tracking-wider text-[#6DE8BE]">Formula</p><p className="mt-2 text-lg font-black">Value in target unit = Value in source unit × Conversion Factor</p></div>
+            <div className="rounded-2xl border border-white/20 bg-white/10 p-5"><p className="text-[10px] font-black uppercase tracking-wider text-[#6DE8BE]">Example</p><p className="mt-2 text-sm leading-6 text-white/75">10 Square Meters × 10.7639 = 107.639 Square Feet.</p></div>
           </div>
         </section>
 
@@ -337,19 +329,19 @@ export default function AreaCalculator() {
   );
 }
 
-function UnitSelect({ label, value, onChange, dark = false }) {
+function UnitSelect({ label, value, onChange }) {
   return (
-    <label className="block">
-      <span className={`mb-1 block text-[9px] font-black uppercase tracking-wider ${dark ? "text-[#8199A5]" : "text-[#71858D]"}`}>{label}</span>
+    <label className="block min-w-0">
+      <span className="mb-2 block text-[11px] font-extrabold text-[#365769]">{label}</span>
       <span className="relative block">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`h-10 w-full appearance-none rounded-xl border px-3 pr-8 text-[11px] font-bold outline-none ${dark ? "border-[#315161] bg-[#0B1C29] text-white focus:border-[#33CC99]" : "border-[#D7E5E7] bg-white text-[#274255] focus:border-[#33CC99]"}`}
+          className="h-12 w-full min-w-0 appearance-none rounded-xl border border-[#D8E7E7] bg-[#F8FBFB] pl-3 pr-8 text-[11px] font-bold text-[#15364A] outline-none transition focus:border-[#0BA381] focus:ring-4 focus:ring-[#0BA381]/10 sm:text-xs"
         >
           {units.map(([key, name]) => <option key={key} value={key}>{name}</option>)}
         </select>
-        <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#78909C]" />
+        <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#66858B]" />
       </span>
     </label>
   );

@@ -455,17 +455,17 @@ export const verifySellerPhoneOtp = async (req, res) => {
     pushHistory(seller, "APPROVED", "Seller account activated after email and Firebase phone verification");
     await seller.save();
 
-    let credentialsEmailSent = true;
+    let welcomeEmailSent = true;
     try {
       await sendSellerApprovalCredentials({ to: seller.email, name: seller.name, sellerId: seller.sellerId, temporaryPassword });
     } catch (emailError) {
-      credentialsEmailSent = false;
-      console.error("SELLER CREDENTIAL EMAIL ERROR:", emailError);
+      welcomeEmailSent = false;
+      console.error("SELLER WELCOME EMAIL ERROR:", emailError);
     }
     return res.status(200).json({
       success: true,
-      message: credentialsEmailSent ? "Firebase phone verified. Seller account activated and credentials email sent." : "Phone verified and seller account activated, but credentials email could not be sent.",
-      data: { applicationId: seller._id, sellerId: seller.sellerId, applicationStatus: seller.applicationStatus, accountStatus: seller.accountStatus, mustChangePassword: seller.mustChangePassword, credentialsEmailSent, firebaseUid: uid },
+      message: welcomeEmailSent ? "Firebase phone verified. Seller account activated and welcome email sent." : "Phone verified and seller account activated, but welcome email could not be sent.",
+      data: { applicationId: seller._id, sellerId: seller.sellerId, applicationStatus: seller.applicationStatus, accountStatus: seller.accountStatus, mustChangePassword: seller.mustChangePassword, welcomeEmailSent, firebaseUid: uid },
     });
   } catch (error) {
     console.error("Verify Seller Firebase Phone Error:", error);
@@ -897,7 +897,7 @@ export const reviewSellerApplication = async (
       return res.status(207).json({
         success: true,
         warning:
-          "Seller approved, but credential email could not be delivered. Check SMTP and re-issue credentials.",
+          "Seller approved, but the welcome email could not be delivered. Check SMTP and retry welcome email delivery.",
         data: {
           _id: seller._id,
           sellerId: seller.sellerId,
@@ -912,7 +912,7 @@ export const reviewSellerApplication = async (
     return res.json({
       success: true,
       message:
-        "Seller approved. Login credentials were emailed to the seller.",
+        "Seller approved. Welcome email sent to the seller.",
       data: {
         _id: seller._id,
         sellerId: seller.sellerId,

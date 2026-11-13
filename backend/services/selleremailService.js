@@ -1,3 +1,4 @@
+import { makeAccountWelcomeEmail } from "./accountWelcomeEmailTemplate.js";
 // import nodemailer from "nodemailer";
 
 // const transporter = nodemailer.createTransport({
@@ -392,128 +393,23 @@ export const sendSellerLoginOtpEmail =
 // SELLER APPROVAL CREDENTIAL EMAIL
 // ======================================================
 
-export const sendSellerApprovalCredentials =
-  async ({
+// Keep the exported function name compatible with existing controllers.
+// The email intentionally contains NO Seller ID, login email or temporary password.
+export const sendSellerApprovalCredentials = async ({ to, name }) => {
+  if (!to || !String(to).trim()) {
+    throw new Error("Seller welcome email recipient is required");
+  }
+
+  const content = makeAccountWelcomeEmail({ name, role: "seller" });
+  await transporter.sendMail({
+    from,
     to,
-    name,
-    sellerId,
-    temporaryPassword,
-  }) => {
-    if (!to || !String(to).trim()) {
-      throw new Error("Seller credentials email recipient is required");
-    }
-
-    await transporter.sendMail({
-      from,
-
-      to,
-
-      subject:
-        "Your DigiNiwas seller account is ready",
-
-      html: `
-        <div
-          style="
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: auto;
-            color: #173247;
-          "
-        >
-          <div
-            style="
-              background: #1F3C50;
-              color: white;
-              padding: 22px;
-              border-radius: 14px 14px 0 0;
-            "
-          >
-            <h2 style="margin: 0;">
-              Seller Account Created
-            </h2>
-          </div>
-
-          <div
-            style="
-              border: 1px solid #DCE5E9;
-              border-top: none;
-              padding: 24px;
-              border-radius: 0 0 14px 14px;
-            "
-          >
-            <p>
-              Hi ${name},
-            </p>
-
-            <p>
-              Your DigiNiwas Seller account
-              is now active after successful email and phone verification.
-            </p>
-
-            <div
-              style="
-                background: #EAF9F4;
-                padding: 16px;
-                border-radius: 12px;
-                margin: 20px 0;
-              "
-            >
-              <p
-                style="
-                  margin: 0 0 8px;
-                "
-              >
-                <strong>
-                  Seller ID:
-                </strong>
-
-                ${sellerId}
-              </p>
-
-              <p
-                style="
-                  margin: 0 0 8px;
-                "
-              >
-                <strong>
-                  Login Email:
-                </strong>
-
-                ${to}
-              </p>
-
-              <p style="margin: 0;">
-                <strong>
-                  Temporary Password:
-                </strong>
-
-                ${temporaryPassword}
-              </p>
-            </div>
-
-            <p>
-              You must change this
-              temporary password
-              after your first login.
-            </p>
-
-            <p
-              style="
-                font-size: 12px;
-                color: #718096;
-              "
-            >
-              DigiNiwas will never ask
-              you to share your password
-              or OTP.
-            </p>
-          </div>
-        </div>
-      `,
-    });
-  };
+    ...content,
+  });
+};
 
 
+// ======================================================
 // ======================================================
 // SELLER REJECTED / ACTION REQUIRED EMAIL
 // ======================================================

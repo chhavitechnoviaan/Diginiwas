@@ -1,0 +1,246 @@
+{
+  "info": {
+    "name": "DigiNiwas Services CMS + Property Reviews",
+    "description": "Postman requests for public/admin services CMS and buyer/partner/seller property reviews. Store JWTs only in a local environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1"
+    },
+    {
+      "key": "buyerToken",
+      "value": ""
+    },
+    {
+      "key": "partnerToken",
+      "value": ""
+    },
+    {
+      "key": "sellerToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "propertyMongoId",
+      "value": "6ab21a1b2213e3539c117479"
+    },
+    {
+      "key": "reviewId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Services CMS",
+      "item": [
+        {
+          "name": "Get public services",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/cms/services/public"
+          }
+        },
+        {
+          "name": "Upload service image (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/cms/services/upload-image"
+          },
+          "response": []
+        },
+        {
+          "name": "Get services CMS (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/cms/services/admin"
+          }
+        },
+        {
+          "name": "Update services CMS (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eyebrow\": \"EVERYTHING YOU NEED\",\n  \"heading\": \"Everything You Need.\",\n  \"subheading\": \"All Under One Roof.\",\n  \"description\": \"Trusted support for every step of your property journey.\",\n  \"services\": [\n    {\n      \"title\": \"Home Loan Assistance\",\n      \"slug\": \"home-loan-assistance\",\n      \"shortDescription\": \"Get guidance through the home loan journey.\",\n      \"description\": \"Long-form service overview goes here.\",\n      \"heroImage\": \"https://example.com/service-hero.jpg\",\n      \"imageTags\": [\n        \"https://example.com/gallery-1.jpg\"\n      ],\n      \"icon\": \"wallet\",\n      \"features\": [\n        \"Eligibility guidance\",\n        \"Document checklist\"\n      ],\n      \"process\": [\n        \"Share requirements\",\n        \"Review options\",\n        \"Proceed with lender\"\n      ],\n      \"benefits\": [\n        \"Clear next steps\"\n      ],\n      \"detailSections\": [\n        {\n          \"icon\": \"check-circle\",\n          \"number\": \"01\",\n          \"title\": \"Initial consultation\",\n          \"content\": \"Main content for this step.\",\n          \"subcontent\": \"Additional supporting content.\",\n          \"image\": \"https://example.com/step-1.jpg\"\n        }\n      ],\n      \"faqs\": [\n        {\n          \"question\": \"What documents do I need?\",\n          \"answer\": \"The team will share a checklist based on your case.\"\n        }\n      ],\n      \"ctaText\": \"Enquire About Home Loans\",\n      \"ctaLink\": \"/contact\",\n      \"active\": true\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/cms/services/admin"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Property Reviews",
+      "item": [
+        {
+          "name": "Get public reviews for property",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/property-reviews/property/{{propertyMongoId}}"
+          }
+        },
+        {
+          "name": "Create review as buyer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{buyerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyMongoId}}\",\n  \"rating\": 5,\n  \"remark\": \"The property information was clear and the visit was helpful.\"\n}"
+            },
+            "url": "{{baseUrl}}/property-reviews"
+          }
+        },
+        {
+          "name": "Create review as partner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{partnerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyMongoId}}\",\n  \"rating\": 4,\n  \"remark\": \"Good property details and communication.\"\n}"
+            },
+            "url": "{{baseUrl}}/property-reviews"
+          }
+        },
+        {
+          "name": "Create review as seller",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{sellerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"propertyId\": \"{{propertyMongoId}}\",\n  \"rating\": 5,\n  \"remark\": \"The listing information was helpful.\"\n}"
+            },
+            "url": "{{baseUrl}}/property-reviews"
+          }
+        },
+        {
+          "name": "Get all reviews (admin CMS)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/property-reviews/admin"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  const first = body.reviews?.[0];",
+                  "  if (first?._id) pm.collectionVariables.set('reviewId', first._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit/hide review (admin CMS)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"remark\": \"Updated review text after moderation.\",\n  \"isVisible\": true\n}"
+            },
+            "url": "{{baseUrl}}/property-reviews/admin/{{reviewId}}"
+          }
+        },
+        {
+          "name": "Delete review (admin CMS)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/property-reviews/admin/{{reviewId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

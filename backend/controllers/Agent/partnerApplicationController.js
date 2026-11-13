@@ -379,7 +379,7 @@ import { notifyUser } from "../../services/notificationService.js";
 //     return res.json({
 //       success: true,
 //       message:
-//         "Partner approved. Temporary credentials sent to registered email.",
+//         "Partner approved. Welcome email sent to registered email.",
 //       data: sanitize(result.partner),
 //     });
 //   } catch (error) {
@@ -1644,8 +1644,8 @@ export const approvePartnerApplication =
           result.partner
             .accountType ===
           "subagent"
-            ? "Sub-Agent approved. Temporary credentials sent to registered email."
-            : "Partner approved. Temporary credentials sent to registered email.",
+            ? "Sub-Agent approved. Welcome email sent to registered email."
+            : "Partner approved. Welcome email sent to registered email.",
 
         data:
           sanitize(

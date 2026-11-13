@@ -2678,6 +2678,8 @@ import {
   X,
 } from "lucide-react";
 
+import { City } from "country-state-city";
+
 import axios from "../api/axios";
 
 import propertyFallback from "../assets/images/property.png";
@@ -2926,7 +2928,7 @@ const SPACES = [
 const blankFilters = () => ({
   search: "",
 
-  city: "Jaipur",
+  city: "",
 
   state: "",
 
@@ -4029,6 +4031,15 @@ function PropertyListCard({ property, listingType, selected, onSelect }) {
   );
 }
 
+const INDIA_CITY_OPTIONS = [...new Map(
+  (City.getCitiesOfCountry("IN") || [])
+    .filter((entry) => entry.name)
+    .map((entry) => [`${entry.name.toLowerCase()}|${entry.stateCode}`, {
+      name: entry.name,
+      stateCode: entry.stateCode,
+    }])
+).values()].sort((a, b) => a.name.localeCompare(b.name));
+
 export default function ExploreProperties() {
   const navigate = useNavigate();
 
@@ -4049,9 +4060,10 @@ export default function ExploreProperties() {
   const [error, setError] = useState("");
 
   const [locationStatus, setLocationStatus] = useState("detecting");
+  const [citySuggestionsOpen, setCitySuggestionsOpen] = useState(false);
 
   const [detectedLocation, setDetectedLocation] = useState({
-    city: "",
+    city: "Ambala",
     lat: null,
     lng: null,
   });
@@ -4157,6 +4169,23 @@ export default function ExploreProperties() {
 
   const isRent = listingType === "Rent";
 
+  const suggestedCities = useMemo(() => {
+    const term = String(filters.search || "").trim().toLocaleLowerCase("en-IN");
+    if (!term || term.length > 60) return [];
+    return INDIA_CITY_OPTIONS.filter((item) => item.name.toLocaleLowerCase("en-IN").startsWith(term)).slice(0, 10);
+  }, [filters.search]);
+
+  const chooseSuggestedCity = (city) => {
+    setFilters((current) => ({ ...current, city, search: "" }));
+    setCitySuggestionsOpen(false);
+    setPage(1);
+    navigate(buildSeoPath({
+      listingType, city, buildingType,
+      locality: "", bedrooms: "", propertyType: "",
+      allBuildingTypes: buildingType === "All",
+    }));
+  };
+
   const update = (key, value) =>
     setFilters((current) => ({ ...current, [key]: value }));
 
@@ -4209,7 +4238,7 @@ export default function ExploreProperties() {
     const requestCity = String(
       // SEO route is authoritative: geolocation/default form values must not
       // replace /properties-in-indore with Jaipur (or any other city).
-      seo?.city || filters.city || detectedLocation.city || "",
+      seo?.city || filters.city || detectedLocation.city || "Ambala",
     ).trim();
     if (requestCity) params.set("city", requestCity);
     Object.entries(filters).forEach(([key, value]) => {
@@ -4312,7 +4341,7 @@ export default function ExploreProperties() {
         if (!cancelled) {
           setLocationStatus("granted");
 
-          setDetectedLocation({ city, lat: latitude, lng: longitude });
+          setDetectedLocation({ city: city || "Ambala", lat: latitude, lng: longitude });
         }
       },
       () => {
@@ -4918,7 +4947,7 @@ export default function ExploreProperties() {
   return (
     <div className="min-h-screen bg-[#F4F7F8] text-[#102E46]">
          {" "}
-      <div className="border-b border-[#DCE7EA] bg-[#274255] px-4 py-5 text-white sm:px-6 lg:px-8">
+      <div className="border-b border-[#163D4D] bg-gradient-to-r from-[#12364A] via-[#214C59] to-[#087B68] px-4 py-7 text-white sm:px-6 lg:px-8">
              {" "}
         <div className="mx-auto max-w-[1500px]">
                  {" "}
@@ -4929,11 +4958,10 @@ export default function ExploreProperties() {
                 <SlidersHorizontal size={12} /> Property Search
               </div>
               <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-                Find a property that fits your requirement
+                Find your next space, with confidence
               </h1>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-white/60">
-                Search live DigiNiwas inventory with location, property, budget,
-                residential and commercial filters.
+                Explore verified homes, shops and spaces with smarter local search.
               </p>
             </div>
                      {" "}
@@ -4945,9 +4973,9 @@ export default function ExploreProperties() {
                   {detectedLocation.city ? ` · ${detectedLocation.city}` : ""}
                 </>
               ) : locationStatus === "denied" ? (
-                "Location unavailable — showing complete inventory"
+                "Location access unavailable · Ambala selected"
               ) : (
-                "Detecting location…"
+                "Detecting your city · Ambala ready"
               )}
             </div>
                    {" "}
@@ -4957,24 +4985,44 @@ export default function ExploreProperties() {
            {" "}
       </div>
          {" "}
-      <div className="sticky top-0 z-[1100] border-b border-[#DCE7EA] bg-white/95 px-3 py-3 shadow-sm backdrop-blur sm:px-5 lg:px-8">
+      <div className="sticky top-0 z-[1100] border-b border-[#DCE7EA] bg-white/95 px-3 py-3 shadow-[0_14px_32px_rgba(15,46,70,.07)] backdrop-blur-xl sm:px-5 lg:px-8">
              {" "}
-        <div className="mx-auto flex max-w-[1500px] flex-col gap-2 lg:flex-row">
+        <div className="mx-auto flex max-w-[1500px] flex-col items-stretch gap-2 lg:flex-row lg:items-center">
                  {" "}
-          <div className="relative flex-1">
-            <Search
-              size={17}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8AA0AA]"
-            />
-            <input
-              value={filters.search}
-              onChange={(e) => update("search", e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              placeholder="Search city, locality, society, property ID, project or address"
-              className="h-11 w-full rounded-xl border border-[#DCE7EA] bg-[#F8FBFC] pl-10 pr-3 text-xs font-semibold outline-none focus:border-[#20BE91] focus:ring-4 focus:ring-[#20BE91]/10"
-            />
+          <div className="relative min-w-0 flex-[2]">
+            <div className="flex h-12 items-center gap-3 rounded-2xl border border-[#D5E5E7] bg-[#F8FBFA] px-4 transition focus-within:border-[#1ABF98] focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-500/10">
+              <Search size={19} className="shrink-0 text-[#078C70]" />
+              <input
+                value={filters.search}
+                onChange={(e) => { update("search", e.target.value); setCitySuggestionsOpen(true); }}
+                onFocus={() => setCitySuggestionsOpen(true)}
+                onBlur={() => window.setTimeout(() => setCitySuggestionsOpen(false), 160)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setCitySuggestionsOpen(false);
+                  if (e.key === "Enter") {
+                    if (citySuggestionsOpen && suggestedCities.length) chooseSuggestedCity(suggestedCities[0].name);
+                    else applyFilters();
+                  }
+                }}
+                placeholder={`Search city, locality, project or property ID · ${filters.city || seo?.city || detectedLocation.city || "Ambala"}`}
+                aria-label="Search properties and Indian cities"
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#16384B] outline-none placeholder:font-medium placeholder:text-[#8094A0]"
+              />
+              <span className="hidden max-w-[120px] truncate rounded-full bg-[#E6F5F0] px-3 py-1.5 text-[11px] font-extrabold text-[#087B68] sm:inline-flex">
+                <MapPin size={13} className="mr-1 shrink-0" /> {filters.city || seo?.city || detectedLocation.city || "Ambala"}
+              </span>
+            </div>
+            {citySuggestionsOpen && suggestedCities.length > 0 && (
+              <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[1250] overflow-hidden rounded-2xl border border-[#D5E5E7] bg-white shadow-[0_20px_48px_rgba(15,46,70,.16)]">
+                <div className="border-b border-[#EEF3F3] px-4 py-2 text-[10px] font-black uppercase tracking-[.14em] text-[#8296A0]">Indian cities matching your search</div>
+                {suggestedCities.map((option) => (
+                  <button type="button" key={`${option.name}-${option.stateCode}`} onMouseDown={(e) => e.preventDefault()} onClick={() => chooseSuggestedCity(option.name)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-semibold text-[#173C4D] hover:bg-[#ECF8F4]">
+                    <MapPin size={15} className="text-[#0A9475]" /> <span>{option.name}</span><span className="ml-auto text-xs text-[#91A1A9]">{option.stateCode}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-                 {" "}
           <div className="flex h-11 overflow-hidden rounded-xl border border-[#DCE7EA] bg-[#F8FBFC]">
             <button
               type="button"
@@ -5009,13 +5057,6 @@ export default function ExploreProperties() {
             <option>Commercial</option>
           </select>
                  {" "}
-          <input
-            value={filters.city}
-            onChange={(e) => update("city", e.target.value)}
-            placeholder="City"
-            className="h-11 w-full rounded-xl border border-[#DCE7EA] bg-[#F8FBFC] px-4 text-xs font-bold outline-none focus:border-[#20BE91] sm:w-40"
-          />
-                 {" "}
           <button
             type="button"
             onClick={() => setMobileFilters(true)}
@@ -5027,7 +5068,7 @@ export default function ExploreProperties() {
           <button
             type="button"
             onClick={applyFilters}
-            className="h-11 rounded-xl bg-[#274255] px-7 text-xs font-black text-white transition hover:bg-[#20BE91] hover:text-[#073A30]"
+            className="h-12 rounded-2xl bg-[#0B856E] px-8 text-xs font-black text-white shadow-[0_8px_18px_rgba(6,128,103,.18)] transition hover:bg-[#086C59]"
           >
             Search
           </button>
