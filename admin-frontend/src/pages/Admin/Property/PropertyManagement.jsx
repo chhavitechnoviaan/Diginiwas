@@ -18106,6 +18106,9 @@
 //   );
 // }
 
+import PropertyReviewsPanel from "./PropertyReviewsPanel";
+import { getAvailablePartnersApi, assignPartnerToPropertyApi, unassignPartnerFromPropertyApi } from "../../../Services/partnerService";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   useNavigate,
@@ -18144,6 +18147,9 @@ import {
   FiMaximize2,
   FiNavigation,
   FiPlus,
+  FiMoreVertical,
+  FiUserPlus,
+  FiClipboard,
 } from "react-icons/fi";
 
 import {
@@ -18391,6 +18397,17 @@ export default function PropertyManagement() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
+  useEffect(() => {
+    const onOutsideClick = (event) => {
+      if (!event.target.closest("[data-property-actions]")) setOpenActionMenuId(null);
+    };
+    const onEscape = (event) => { if (event.key === "Escape") setOpenActionMenuId(null); };
+    document.addEventListener("pointerdown", onOutsideClick);
+    document.addEventListener("keydown", onEscape);
+    return () => { document.removeEventListener("pointerdown", onOutsideClick); document.removeEventListener("keydown", onEscape); };
+  }, []);
+
 
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18806,6 +18823,87 @@ export default function PropertyManagement() {
           "Unable to delete property.",
         confirmButtonColor: DARK,
       });
+    }
+  };
+
+  const handleAssignPartner = async (property) => {
+    if (!property?._id || property?.assignedPartner?.partnerId) return;
+    try {
+      const response = await getAvailablePartnersApi({ city: property.city || property.location?.city || "" });
+      let partners = Array.isArray(response?.data) ? response.data : [];
+      if (!partners.length) {
+        const fallback = await getAvailablePartnersApi();
+        partners = Array.isArray(fallback?.data) ? fallback.data : [];
+      }
+      partners = partners.filter((partner) => partner?._id);
+      if (!partners.length) {
+        await Swal.fire({ icon: "info", title: "No Partners Available", text: "No eligible partners were returned.", confirmButtonColor: DARK });
+        return;
+      }
+
+      // Searchable picker; use DOM textContent to avoid inserting partner-supplied HTML.
+      const result = await Swal.fire({
+        title: "Assign Partner",
+        html: '<div class="text-left"><p id="assign-property-name" style="margin-bottom:12px;font-size:13px;color:#64748b"></p><label for="partner-search" style="display:block;font-size:12px;margin-bottom:6px">Search eligible partner</label><input id="partner-search" class="swal2-input" placeholder="Search name, partner ID, phone or city" style="width:100%;margin:0 0 12px 0;box-sizing:border-box" autocomplete="off"/><label for="partner-picker" style="display:block;font-size:12px;margin-bottom:6px">Select partner</label><select id="partner-picker" class="swal2-select" size="6" style="display:block;width:100%;height:190px;margin:0;box-sizing:border-box"></select><p id="partner-count" style="font-size:12px;color:#64748b;margin-top:8px"></p></div>',
+        showCancelButton: true,
+        confirmButtonText: "Assign Partner",
+        confirmButtonColor: "#087F68",
+        focusConfirm: false,
+        didOpen: (popup) => {
+          const search = popup.querySelector("#partner-search");
+          const picker = popup.querySelector("#partner-picker");
+          const count = popup.querySelector("#partner-count");
+          popup.querySelector("#assign-property-name").textContent = property.title || property.propertyId || "Property";
+          const render = () => {
+            const query = search.value.trim().toLowerCase();
+            const filtered = partners.filter((partner) => [partner.name, partner.partnerId, partner.phone, partner.email, partner.city, partner.location?.city].some((v) => String(v || "").toLowerCase().includes(query)));
+            const selected = picker.value;
+            picker.replaceChildren();
+            for (const partner of filtered) {
+              const option = document.createElement("option");
+              option.value = String(partner._id);
+              option.textContent = `${partner.name || "Partner"} (${partner.partnerId || "No ID"})${partner.location?.city ? ` — ${partner.location.city}` : ""}`;
+              picker.appendChild(option);
+            }
+            if (filtered.some((p) => String(p._id) === selected)) picker.value = selected;
+            else picker.selectedIndex = -1;
+            count.textContent = `${filtered.length} of ${partners.length} eligible partners`;
+          };
+          search.addEventListener("input", render);
+          render();
+          search.focus();
+        },
+        preConfirm: () => {
+          const selectedId = Swal.getPopup()?.querySelector("#partner-picker")?.value;
+          if (!selectedId) { Swal.showValidationMessage("Please select an eligible partner."); return false; }
+          return selectedId;
+        },
+      });
+      if (!result.isConfirmed) return;
+      const responseAssign = await assignPartnerToPropertyApi(property._id, { partnerId: result.value, assignedBy: { name: "Admin", role: "Admin" } });
+      if (!responseAssign?.success) throw new Error(responseAssign?.message || "Unable to assign partner.");
+      await Swal.fire({ icon: "success", title: "Partner Assigned", confirmButtonColor: DARK });
+      await getProperties();
+    } catch (error) {
+      await Swal.fire({ icon: "error", title: "Assignment Failed", text: error?.response?.data?.message || error.message || "Unable to assign partner.", confirmButtonColor: DARK });
+    }
+  };
+
+  const handleUnassignPartner = async (property) => {
+    if (!property?._id || !property?.assignedPartner?.partnerId) return;
+    const confirmed = await Swal.fire({
+      icon: "warning", title: "Unassign Partner?",
+      text: `Remove ${property.assignedPartner.name || "the assigned partner"} from ${property.title || "this property"}? The property's Live status will remain unchanged.`,
+      showCancelButton: true, confirmButtonText: "Yes, Unassign", cancelButtonText: "Cancel", confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed.isConfirmed) return;
+    try {
+      const response = await unassignPartnerFromPropertyApi(property._id);
+      if (!response?.success) throw new Error(response?.message || "Unable to unassign partner.");
+      await Swal.fire({ icon: "success", title: "Partner Unassigned", confirmButtonColor: DARK });
+      await getProperties();
+    } catch (error) {
+      await Swal.fire({ icon: "error", title: "Unassignment Failed", text: error?.response?.data?.message || error.message || "Unable to unassign partner.", confirmButtonColor: DARK });
     }
   };
 
@@ -19581,69 +19679,28 @@ export default function PropertyManagement() {
                           </td>
 
                           <td className="px-1 py-3 sm:px-2 sm:py-3.5">
-                            <div className="flex flex-wrap items-center justify-center gap-0.5 sm:flex-nowrap">
-                              <ActionButton
-                                title="View Property"
-                                tone="teal"
-                                onClick={() =>
-                                  handleOpenPreview(
-                                    property
-                                  )
-                                }
-                              >
+                            <div className="flex items-center justify-center gap-1">
+                              <ActionButton title="View Property" tone="teal" onClick={() => handleOpenPreview(property)}>
                                 <FiEye size={15} />
                               </ActionButton>
-
-                              <ActionButton
-                                title="Edit Property"
-                                tone="blue"
-                                onClick={() =>
-                                  handleOpenEdit(
-                                    property
-                                  )
-                                }
-                              >
-                                <FiEdit2
-                                  size={14}
-                                />
-                              </ActionButton>
-
-                              <ActionButton
-                                title={
-                                  property?.status ===
-                                  "Verified"
-                                    ? "Already Verified"
-                                    : "Verify Property"
-                                }
-                                tone="green"
-                                disabled={
-                                  property?.status ===
-                                  "Verified"
-                                }
-                                onClick={() =>
-                                  handleVerifyProperty(
-                                    property
-                                  )
-                                }
-                              >
-                                <MdOutlineCheckCircle
-                                  size={17}
-                                />
-                              </ActionButton>
-
-                              <ActionButton
-                                title="Delete Property"
-                                tone="red"
-                                onClick={() =>
-                                  handleDeleteProperty(
-                                    property._id
-                                  )
-                                }
-                              >
-                                <FiTrash2
-                                  size={14}
-                                />
-                              </ActionButton>
+                              <div className="relative" data-property-actions>
+                                <button type="button" aria-label={`More actions for ${property.title || "property"}`} aria-haspopup="menu" aria-expanded={openActionMenuId === String(property._id)}
+                                  onClick={() => setOpenActionMenuId((current) => current === String(property._id) ? null : String(property._id))}
+                                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#DCE5E9] bg-white text-[#1F4256] hover:bg-[#EAF9F4]">
+                                  <FiMoreVertical size={16} />
+                                </button>
+                                {openActionMenuId === String(property._id) && (
+                                  <div role="menu" className="absolute right-0 top-full z-50 mt-1 w-56 rounded-xl border border-[#DCE5E9] bg-white p-1.5 text-left shadow-xl">
+                                    <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); handleOpenEdit(property); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#1F4256] hover:bg-[#F0F8F5]"><FiEdit2/> Edit Property</button>
+                                    <button type="button" role="menuitem" disabled={property.status === "Verified" || property.status === "Live"} onClick={() => { setOpenActionMenuId(null); handleVerifyProperty(property); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#1F4256] hover:bg-[#F0F8F5] disabled:opacity-40"><MdOutlineCheckCircle/> Verify Property</button>
+                                    <button type="button" role="menuitem" disabled={Boolean(property?.assignedPartner?.partnerId)} onClick={() => { setOpenActionMenuId(null); handleAssignPartner(property); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#1F4256] hover:bg-[#F0F8F5] disabled:cursor-not-allowed disabled:opacity-40"><FiUserPlus/> Assign Partner</button>
+                                    {property?.assignedPartner?.partnerId && <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); handleUnassignPartner(property); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50"><FiUserPlus/> Unassign Partner</button>}
+                                    <button type="button" role="menuitem" disabled={property.status === "Live"} onClick={() => { setOpenActionMenuId(null); navigate(`/property-verification?propertyId=${encodeURIComponent(String(property._id))}`); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-[#1F4256] hover:bg-[#F0F8F5] disabled:cursor-not-allowed disabled:opacity-40"><FiClipboard/> Final Review &amp; Make Live</button>
+                                    <div className="my-1 border-t border-[#E7EDF0]"/>
+                                    <button type="button" role="menuitem" onClick={() => { setOpenActionMenuId(null); handleDeleteProperty(property._id); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"><FiTrash2/> Delete Property</button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -24485,6 +24542,8 @@ function PropertyPreview({
                 </div>
               </section>
             )}
+
+            <PropertyReviewsPanel propertyId={property._id || property.id} isOpen={open} />
 
             {/* =================================================
                 FINAL REVIEW NOTES & STATUS HISTORY

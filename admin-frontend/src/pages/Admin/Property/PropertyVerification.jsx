@@ -1526,7 +1526,11 @@
     return null;
   }
 
+  import { useSearchParams } from "react-router-dom";
+
   export default function PropertyVerificationCenter() {
+    const [reviewParams] = useSearchParams();
+    const deepLinkedPropertyId = reviewParams.get("propertyId");
     const [activeTab, setActiveTab] =
       useState("Ready for Final Review");
 
@@ -1697,6 +1701,14 @@
         setDetailLoading(false);
       }
     };
+
+    // Open the exact property's review when launched from Property Management.
+    useEffect(() => {
+      if (deepLinkedPropertyId && /^[a-f\d]{24}$/i.test(deepLinkedPropertyId)) {
+        openFinalReview(deepLinkedPropertyId);
+      }
+      // Deliberately re-run only when selected deep-link changes.
+    }, [deepLinkedPropertyId]);
 
     const makeLive = async () => {
       const property =

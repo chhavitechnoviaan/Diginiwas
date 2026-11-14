@@ -1,0 +1,4854 @@
+// import React, {
+//   useEffect,
+//   useMemo,
+//   useState,
+// } from "react";
+
+// import {
+//   RefreshCw,
+//   Download,
+//   Search,
+//   SlidersHorizontal,
+//   ChevronDown,
+//   ChevronLeft,
+//   ChevronRight,
+//   MapPin,
+//   BriefcaseBusiness,
+//   Clock3,
+//   ArrowUpRight,
+//   UsersRound,
+//   UserRound,
+//   LoaderCircle,
+//   CheckCircle2,
+//   Building2,
+//   UserMinus,
+// } from "lucide-react";
+
+// import Swal from "sweetalert2";
+
+// import {
+//   getAssignmentSummaryApi,
+//   getAssignmentPropertiesApi,
+//   getAvailablePartnersApi,
+//   assignPartnerToPropertyApi,
+//   unassignPartnerFromPropertyApi,
+// } from "../../../Services/partnerService";
+
+
+// // ======================================================
+// // TABS
+// // ======================================================
+
+// const tabs = [
+//   "All",
+//   "Unassigned",
+//   "Assigned",
+// ];
+
+
+// // ======================================================
+// // MAIN COMPONENT
+// // ======================================================
+
+// export default function PartnerAssignmentQueue() {
+//   // ======================================================
+//   // STATES
+//   // ======================================================
+
+//   const [
+//     activeTab,
+//     setActiveTab,
+//   ] = useState("Unassigned");
+
+//   const [
+//     search,
+//     setSearch,
+//   ] = useState("");
+
+//   const [
+//     cityFilter,
+//     setCityFilter,
+//   ] = useState("");
+
+//   const [
+//     localityFilter,
+//     setLocalityFilter,
+//   ] = useState("");
+
+//   const [
+//     categoryFilter,
+//     setCategoryFilter,
+//   ] = useState("");
+
+//   const [
+//     partnerTypeFilter,
+//     setPartnerTypeFilter,
+//   ] = useState("");
+
+//   const [
+//     properties,
+//     setProperties,
+//   ] = useState([]);
+
+//   const [
+//     availablePartners,
+//     setAvailablePartners,
+//   ] = useState([]);
+
+//   const [
+//     summary,
+//     setSummary,
+//   ] = useState({
+//     total: 0,
+//     unassigned: 0,
+//     assigned: 0,
+//     assignedToday: 0,
+//     availablePartners: 0,
+//   });
+
+//   const [
+//     loading,
+//     setLoading,
+//   ] = useState(true);
+
+//   const [
+//     partnersLoading,
+//     setPartnersLoading,
+//   ] = useState(false);
+
+//   const [
+//     assigningId,
+//     setAssigningId,
+//   ] = useState("");
+
+//   const [
+//     unassigningId,
+//     setUnassigningId,
+//   ] = useState("");
+
+//   const [
+//     page,
+//     setPage,
+//   ] = useState(1);
+
+//   const pageSize = 10;
+
+
+//   // ======================================================
+//   // TAB → API VALUE
+//   // ======================================================
+
+//   const assignmentType =
+//     activeTab === "Assigned"
+//       ? "assigned"
+//       : activeTab === "Unassigned"
+//       ? "unassigned"
+//       : "all";
+
+
+//   // ======================================================
+//   // FETCH SUMMARY
+//   // ======================================================
+
+//   const fetchSummary =
+//     async () => {
+//       try {
+//         const response =
+//           await getAssignmentSummaryApi();
+
+//         console.log(
+//           "ASSIGNMENT SUMMARY:",
+//           response
+//         );
+
+//         if (response?.success) {
+//           setSummary({
+//             total:
+//               response?.data
+//                 ?.total || 0,
+
+//             unassigned:
+//               response?.data
+//                 ?.unassigned || 0,
+
+//             assigned:
+//               response?.data
+//                 ?.assigned || 0,
+
+//             assignedToday:
+//               response?.data
+//                 ?.assignedToday || 0,
+
+//             availablePartners:
+//               response?.data
+//                 ?.availablePartners || 0,
+//           });
+//         }
+//       } catch (error) {
+//         console.error(
+//           "Summary Error:",
+//           error
+//         );
+//       }
+//     };
+
+
+//   // ======================================================
+//   // FETCH PROPERTIES
+//   // ======================================================
+
+//   const fetchProperties =
+//     async () => {
+//       try {
+//         setLoading(true);
+
+//         const response =
+//           await getAssignmentPropertiesApi({
+//             assignment:
+//               assignmentType,
+
+//             search:
+//               search.trim(),
+
+//             city:
+//               cityFilter,
+
+//             locality:
+//               localityFilter,
+
+//             category:
+//               categoryFilter,
+//           });
+
+//         console.log(
+//           "ASSIGNMENT PROPERTIES:",
+//           response
+//         );
+
+//         // if (response?.success) {
+//         //   setProperties(
+//         //     response?.data || []
+//         //   );
+//         // } else {
+//         //   setProperties([]);
+//         // }
+//         if (response?.success) {
+//   const filteredProperties = (
+//     response?.data || []
+//   ).filter(
+//     (property) =>
+//       property?.status
+//         ?.toLowerCase()
+//         ?.trim() !== "draft"
+//   );
+
+//   setProperties(filteredProperties);
+// } else {
+//   setProperties([]);
+// }
+//       } catch (error) {
+//         console.error(
+//           "Properties Error:",
+//           error
+//         );
+
+//         setProperties([]);
+
+//         await Swal.fire({
+//           icon: "error",
+
+//           title:
+//             "Unable to Load Properties",
+
+//           text:
+//             error?.response?.data
+//               ?.message ||
+//             "Unable to fetch properties.",
+
+//           confirmButtonColor:
+//             "#25B98B",
+//         });
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+
+//   // ======================================================
+//   // FETCH AVAILABLE PARTNERS
+//   // ======================================================
+
+//   const fetchAvailablePartners =
+//     async (
+//       property = null
+//     ) => {
+//       try {
+//         setPartnersLoading(true);
+
+//         const params = {};
+
+//         // Same city partner ko preference
+//         if (
+//           property?.city
+//         ) {
+//           params.city =
+//             property.city;
+//         }
+
+//         if (
+//           partnerTypeFilter
+//         ) {
+//           params.partnerType =
+//             partnerTypeFilter;
+//         }
+
+//         let response =
+//           await getAvailablePartnersApi(
+//             params
+//           );
+
+//         // Agar same city me partner nahi mila
+//         // to all available partners lao
+//         if (
+//           response?.success &&
+//           response?.data?.length ===
+//             0 &&
+//           property?.city
+//         ) {
+//           response =
+//             await getAvailablePartnersApi(
+//               partnerTypeFilter
+//                 ? {
+//                     partnerType:
+//                       partnerTypeFilter,
+//                   }
+//                 : {}
+//             );
+//         }
+
+//         if (response?.success) {
+//           setAvailablePartners(
+//             response?.data || []
+//           );
+
+//           return (
+//             response?.data || []
+//           );
+//         }
+
+//         setAvailablePartners([]);
+
+//         return [];
+//       } catch (error) {
+//         console.error(
+//           "Partners Error:",
+//           error
+//         );
+
+//         setAvailablePartners([]);
+
+//         return [];
+//       } finally {
+//         setPartnersLoading(false);
+//       }
+//     };
+
+
+//   // ======================================================
+//   // LOAD DATA
+//   // ======================================================
+
+//   useEffect(() => {
+//     const timer =
+//       setTimeout(() => {
+//         fetchProperties();
+//       }, 300);
+
+//     return () =>
+//       clearTimeout(timer);
+//   }, [
+//     assignmentType,
+//     search,
+//     cityFilter,
+//     localityFilter,
+//     categoryFilter,
+//   ]);
+
+
+//   useEffect(() => {
+//     fetchSummary();
+//   }, []);
+
+
+//   useEffect(() => {
+//     setPage(1);
+//   }, [
+//     activeTab,
+//     search,
+//     cityFilter,
+//     localityFilter,
+//     categoryFilter,
+//   ]);
+
+
+//   // ======================================================
+//   // FORMAT PROPERTY ROWS
+//   // ======================================================
+
+//   const rows = useMemo(
+//     () =>
+//       properties.map(
+//         (property) => {
+//           const assigned =
+//             Boolean(
+//               property
+//                 ?.assignedPartner
+//                 ?.partnerId
+//             );
+
+//           return {
+//             id:
+//               property?._id,
+
+//             propertyName:
+//               property?.title ||
+//               "-",
+
+//             propertyId:
+//               property?.propertyId ||
+//               "-",
+
+//             location:
+//               [
+//                 property?.locality,
+//                 property?.city,
+//                 property?.state,
+//               ]
+//                 .filter(Boolean)
+//                 .join(", ") ||
+//               "-",
+
+//             city:
+//               property?.city ||
+//               "",
+
+//             locality:
+//               property?.locality ||
+//               "",
+
+//             developer:
+//               property?.developerName ||
+//               "-",
+
+//             projectName:
+//               property?.projectName ||
+//               "-",
+
+//             propertyType:
+//               property?.category ||
+//               "-",
+
+//             transactionType:
+//               property?.transactionType ||
+//               "-",
+
+//             price:
+//               property?.price ||
+//               0,
+
+//             size:
+//               property?.propertySize ||
+//               0,
+
+//             sizeUnit:
+//               property?.sizeUnit ||
+//               "sqft",
+
+//             status:
+//               assigned
+//                 ? "Assigned"
+//                 : "Unassigned",
+
+//             assigned,
+
+//             assignedPartner:
+//               property
+//                 ?.assignedPartner,
+
+//             createdAt:
+//               property?.createdAt,
+
+//             raw:
+//               property,
+//           };
+//         }
+//       ),
+//     [properties]
+//   );
+
+
+//   // ======================================================
+//   // PAGINATION
+//   // ======================================================
+
+//   const totalPages =
+//     Math.max(
+//       1,
+//       Math.ceil(
+//         rows.length /
+//           pageSize
+//       )
+//     );
+
+//   const safePage =
+//     Math.min(
+//       page,
+//       totalPages
+//     );
+
+//   const paginatedRows =
+//     rows.slice(
+//       (safePage - 1) *
+//         pageSize,
+
+//       safePage *
+//         pageSize
+//     );
+
+
+//   // ======================================================
+//   // DYNAMIC FILTER DATA
+//   // ======================================================
+
+//   const cities =
+//     useMemo(
+//       () =>
+//         [
+//           ...new Set(
+//             properties
+//               .map(
+//                 (item) =>
+//                   item?.city
+//               )
+//               .filter(Boolean)
+//           ),
+//         ].sort(),
+//       [properties]
+//     );
+
+
+//   const localities =
+//     useMemo(
+//       () =>
+//         [
+//           ...new Set(
+//             properties
+//               .map(
+//                 (item) =>
+//                   item?.locality
+//               )
+//               .filter(Boolean)
+//           ),
+//         ].sort(),
+//       [properties]
+//     );
+
+
+//   // ======================================================
+//   // ASSIGN PARTNER
+//   // ======================================================
+
+//   const handleAssignPartner =
+//     async (property) => {
+//       const partners =
+//         await fetchAvailablePartners(
+//           property
+//         );
+
+//       if (
+//         partners.length === 0
+//       ) {
+//         await Swal.fire({
+//           icon: "warning",
+
+//           title:
+//             "No Partner Available",
+
+//           text:
+//             "No verified and active partner is currently available.",
+
+//           confirmButtonColor:
+//             "#25B98B",
+//         });
+
+//         return;
+//       }
+
+
+//       const partnerOptions =
+//         {};
+
+//       partners.forEach(
+//         (partner) => {
+//           const city =
+//             partner
+//               ?.location
+//               ?.city ||
+//             "No Location";
+
+//           const type =
+//             partner
+//               ?.partnerType ||
+//             "single";
+
+//           const count =
+//             partner
+//               ?.assignedPropertyCount ||
+//             0;
+
+//           partnerOptions[
+//             partner._id
+//           ] =
+//             `${partner?.name || "Partner"} | ${
+//               partner?.partnerId || "-"
+//             } | ${city} | ${capitalize(
+//               type
+//             )} | ${count} Assigned`;
+//         }
+//       );
+
+
+//       const result =
+//         await Swal.fire({
+//           title:
+//             "Assign Partner",
+
+//           html: `
+//             <div style="
+//               text-align:left;
+//               border:1px solid #E4E9EE;
+//               background:#F8FAFB;
+//               border-radius:12px;
+//               padding:14px;
+//               margin-bottom:10px;
+//               font-size:12px;
+//               color:#667085;
+//               line-height:1.7;
+//             ">
+//               <div style="
+//                 color:#12344D;
+//                 font-size:14px;
+//                 font-weight:700;
+//               ">
+//                 ${property?.title || "Property"}
+//               </div>
+
+//               <div style="
+//                 color:#25B98B;
+//                 font-weight:600;
+//                 margin-top:3px;
+//               ">
+//                 ${property?.propertyId || "-"}
+//               </div>
+
+//               <div style="
+//                 margin-top:5px;
+//               ">
+//                 ${
+//                   property?.locality || ""
+//                 }
+//                 ${
+//                   property?.city
+//                     ? `, ${property.city}`
+//                     : ""
+//                 }
+//               </div>
+//             </div>
+//           `,
+
+//           input:
+//             "select",
+
+//           inputOptions:
+//             partnerOptions,
+
+//           inputPlaceholder:
+//             "Select available partner",
+
+//           showCancelButton:
+//             true,
+
+//           confirmButtonText:
+//             "Assign Partner",
+
+//           cancelButtonText:
+//             "Cancel",
+
+//           confirmButtonColor:
+//             "#25B98B",
+
+//           cancelButtonColor:
+//             "#667085",
+
+//           inputValidator:
+//             (value) => {
+//               if (!value) {
+//                 return "Please select a partner.";
+//               }
+//             },
+//         });
+
+
+//       if (
+//         !result.isConfirmed
+//       ) {
+//         return;
+//       }
+
+
+//       try {
+//         setAssigningId(
+//           property._id
+//         );
+
+//         const savedUser =
+//           localStorage.getItem(
+//             "user"
+//           );
+
+//         const loggedUser =
+//           savedUser
+//             ? JSON.parse(
+//                 savedUser
+//               )
+//             : {};
+
+
+//         const response =
+//           await assignPartnerToPropertyApi(
+//             property._id,
+//             {
+//               partnerId:
+//                 result.value,
+
+//               assignedBy: {
+//                 userId:
+//                   loggedUser?.id,
+
+//                 name:
+//                   loggedUser?.name ||
+//                   "Admin",
+
+//                 role:
+//                   loggedUser?.role
+//                     ? capitalize(
+//                         loggedUser.role
+//                       )
+//                     : "Admin",
+//               },
+//             }
+//           );
+
+
+//         if (response?.success) {
+//           await Swal.fire({
+//             icon: "success",
+
+//             title:
+//               "Partner Assigned",
+
+//             text:
+//               response?.message ||
+//               "Partner assigned successfully.",
+
+//             confirmButtonColor:
+//               "#25B98B",
+//           });
+
+//           await Promise.all([
+//             fetchProperties(),
+//             fetchSummary(),
+//           ]);
+//         } else {
+//           throw new Error(
+//             response?.message ||
+//               "Assignment failed."
+//           );
+//         }
+//       } catch (error) {
+//         await Swal.fire({
+//           icon: "error",
+
+//           title:
+//             "Assignment Failed",
+
+//           text:
+//             error?.response?.data
+//               ?.message ||
+//             error?.message ||
+//             "Unable to assign partner.",
+
+//           confirmButtonColor:
+//             "#25B98B",
+//         });
+//       } finally {
+//         setAssigningId("");
+//       }
+//     };
+
+
+//   // ======================================================
+//   // UNASSIGN PARTNER
+//   // ======================================================
+
+//   const handleUnassignPartner =
+//     async (property) => {
+//       try {
+//         const partnerName =
+//           property
+//             ?.assignedPartner
+//             ?.name ||
+//           "Partner";
+
+//         const propertyName =
+//           property?.title ||
+//           property?.propertyId ||
+//           "Property";
+
+//         const result =
+//           await Swal.fire({
+//             title:
+//               "Unassign Partner?",
+
+//             html: `
+//               <div
+//                 style="
+//                   text-align:left;
+//                   border:1px solid #E4E9EE;
+//                   background:#F8FAFB;
+//                   border-radius:12px;
+//                   padding:15px;
+//                   margin-top:8px;
+//                   font-size:12px;
+//                   color:#667085;
+//                   line-height:1.7;
+//                 "
+//               >
+//                 <div
+//                   style="
+//                     color:#12344D;
+//                     font-size:14px;
+//                     font-weight:700;
+//                   "
+//                 >
+//                   ${propertyName}
+//                 </div>
+
+//                 <div
+//                   style="
+//                     color:#25B98B;
+//                     font-size:11px;
+//                     font-weight:600;
+//                     margin-top:3px;
+//                   "
+//                 >
+//                   ${property?.propertyId || "-"}
+//                 </div>
+
+//                 <div style="margin-top:12px;">
+//                   This property is currently assigned to
+//                   <strong style="color:#12344D;">
+//                     ${partnerName}
+//                   </strong>.
+//                 </div>
+
+//                 <div style="margin-top:5px;">
+//                   Unassigning will remove this property from the partner's assigned properties as well.
+//                 </div>
+//               </div>
+//             `,
+
+//             icon: "warning",
+//             showCancelButton: true,
+//             confirmButtonText: "Yes, Unassign",
+//             cancelButtonText: "Cancel",
+//             confirmButtonColor: "#D97706",
+//             cancelButtonColor: "#667085",
+//             reverseButtons: true,
+//           });
+
+//         if (!result.isConfirmed) {
+//           return;
+//         }
+
+//         setUnassigningId(
+//           property._id
+//         );
+
+//         const savedUser =
+//           localStorage.getItem(
+//             "user"
+//           );
+
+//         const loggedUser =
+//           savedUser
+//             ? JSON.parse(
+//                 savedUser
+//               )
+//             : {};
+
+//         const response =
+//           await unassignPartnerFromPropertyApi(
+//             property._id,
+//             {
+//               unassignedBy: {
+//                 userId:
+//                   loggedUser?.id,
+
+//                 name:
+//                   loggedUser?.name ||
+//                   "Admin",
+
+//                 role:
+//                   loggedUser?.role
+//                     ? capitalize(
+//                         loggedUser.role
+//                       )
+//                     : "Admin",
+//               },
+
+//               remarks:
+//                 `Property ${property?.propertyId || ""} unassigned from ${partnerName}`,
+//             }
+//           );
+
+//         if (response?.success) {
+//           await Swal.fire({
+//             icon: "success",
+//             title:
+//               "Partner Unassigned",
+//             text:
+//               response?.message ||
+//               "Partner removed from property successfully.",
+//             confirmButtonColor:
+//               "#25B98B",
+//           });
+
+//           await Promise.all([
+//             fetchProperties(),
+//             fetchSummary(),
+//           ]);
+//         } else {
+//           throw new Error(
+//             response?.message ||
+//               "Unable to unassign partner."
+//           );
+//         }
+//       } catch (error) {
+//         console.error(
+//           "UNASSIGN ERROR:",
+//           error
+//         );
+
+//         await Swal.fire({
+//           icon: "error",
+//           title:
+//             "Unassign Failed",
+//           text:
+//             error?.response?.data
+//               ?.message ||
+//             error?.message ||
+//             "Unable to unassign partner.",
+//           confirmButtonColor:
+//             "#25B98B",
+//         });
+//       } finally {
+//         setUnassigningId("");
+//       }
+//     };
+
+
+//   // ======================================================
+//   // CLEAR FILTER
+//   // ======================================================
+
+//   const clearFilters = () => {
+//     setSearch("");
+
+//     setCityFilter("");
+
+//     setLocalityFilter("");
+
+//     setCategoryFilter("");
+
+//     setPartnerTypeFilter("");
+
+//     setPage(1);
+//   };
+
+
+//   // ======================================================
+//   // REFRESH
+//   // ======================================================
+
+//   const handleRefresh =
+//     async () => {
+//       await Promise.all([
+//         fetchProperties(),
+//         fetchSummary(),
+//       ]);
+//     };
+
+
+//   // ======================================================
+//   // EXPORT
+//   // ======================================================
+
+//   const exportList = () => {
+//     if (
+//       rows.length === 0
+//     ) {
+//       Swal.fire({
+//         icon: "info",
+
+//         title:
+//           "No Data",
+
+//         text:
+//           "No properties available to export.",
+
+//         confirmButtonColor:
+//           "#25B98B",
+//       });
+
+//       return;
+//     }
+
+
+//     const header = [
+//       "Property ID",
+//       "Property Name",
+//       "Project",
+//       "Location",
+//       "Category",
+//       "Transaction",
+//       "Size",
+//       "Price",
+//       "Status",
+//       "Partner",
+//       "Partner ID",
+//     ];
+
+
+//     const data =
+//       rows.map(
+//         (item) => [
+//           item.propertyId,
+
+//           item.propertyName,
+
+//           item.projectName,
+
+//           item.location,
+
+//           item.propertyType,
+
+//           item.transactionType,
+
+//           `${item.size} ${item.sizeUnit}`,
+
+//           item.price,
+
+//           item.status,
+
+//           item
+//             ?.assignedPartner
+//             ?.name || "",
+
+//           item
+//             ?.assignedPartner
+//             ?.partnerCode || "",
+//         ]
+//       );
+
+
+//     const csv = [
+//       header.join(","),
+
+//       ...data.map(
+//         (row) =>
+//           row
+//             .map(
+//               (cell) =>
+//                 `"${String(
+//                   cell ?? ""
+//                 ).replace(
+//                   /"/g,
+//                   '""'
+//                 )}"`
+//             )
+//             .join(",")
+//       ),
+//     ].join("\n");
+
+
+//     const blob =
+//       new Blob(
+//         [csv],
+//         {
+//           type:
+//             "text/csv;charset=utf-8;",
+//         }
+//       );
+
+
+//     const url =
+//       URL.createObjectURL(
+//         blob
+//       );
+
+
+//     const link =
+//       document.createElement(
+//         "a"
+//       );
+
+//     link.href = url;
+
+//     link.download =
+//       "partner-assignment-properties.csv";
+
+//     document.body.appendChild(
+//       link
+//     );
+
+//     link.click();
+
+//     document.body.removeChild(
+//       link
+//     );
+
+//     URL.revokeObjectURL(
+//       url
+//     );
+//   };
+
+
+//   // ======================================================
+//   // SUMMARY DATA
+//   // ======================================================
+
+//   const summaryData = [
+//     {
+//       id: "total",
+
+//       label:
+//         "TOTAL PROPERTIES",
+
+//       value:
+//         summary.total,
+
+//       description:
+//         "Registered properties",
+//     },
+
+//     {
+//       id:
+//         "unassigned",
+
+//       label:
+//         "AWAITING ASSIGNMENT",
+
+//       value:
+//         summary.unassigned,
+
+//       description:
+//         "Requires partner",
+//     },
+
+//     {
+//       id:
+//         "assigned",
+
+//       label:
+//         "ASSIGNED PROPERTIES",
+
+//       value:
+//         summary.assigned,
+
+//       description:
+//         "Partner assigned",
+//     },
+
+//     {
+//       id:
+//         "today",
+
+//       label:
+//         "ASSIGNED TODAY",
+
+//       value:
+//         summary.assignedToday,
+
+//       description:
+//         "Today's assignments",
+//     },
+
+//     {
+//       id:
+//         "partners",
+
+//       label:
+//         "AVAILABLE PARTNERS",
+
+//       value:
+//         summary.availablePartners,
+
+//       description:
+//         "Verified partners",
+//     },
+//   ];
+
+
+//   // ======================================================
+//   // UI
+//   // ======================================================
+
+//   return (
+//     <div className="min-h-screen  px-3 py-1 sm:px-1 lg:px-1">
+
+//       <div className="mx-auto w-full max-w-[1650px] space-y-4">
+
+
+//         <div className="flex flex-col gap-3 px-1 lg:flex-row lg:items-center lg:justify-between">
+
+//           <div>
+
+//             <h2 className="mt-1 text-2xl font-extrabold text-[#1F3C50]">
+//               Partner Assignment Queue
+//             </h2>
+
+//             <p className="mt-1 text-[10px] font-medium text-[#8998AF] sm:text-[11px]">
+//               Assign suitable verified partners to unassigned properties.
+//             </p>
+
+//           </div>
+
+
+//           <div className="flex flex-wrap items-center gap-2">
+
+//             <button
+//               onClick={
+//                 handleRefresh
+//               }
+//               className="flex h-[38px] items-center gap-2 rounded-lg border border-[#DBE3E9] bg-white px-4 text-[10px] font-semibold text-[#536779] shadow-[0_4px_18px_rgba(15,47,69,0.04)] transition hover:bg-[#F8FAFC]"
+//             >
+
+//               <RefreshCw
+//                 size={14}
+//               />
+
+//               Refresh
+
+//             </button>
+
+
+//             <button
+//               onClick={
+//                 exportList
+//               }
+//               className="flex h-[38px] items-center gap-2 rounded-lg border border-[#DBE3E9] bg-white px-4 text-[10px] font-semibold text-[#536779] shadow-[0_4px_18px_rgba(15,47,69,0.04)] transition hover:bg-[#F8FAFC]"
+//             >
+
+//               <Download
+//                 size={14}
+//               />
+
+//               Export List
+
+//             </button>
+
+//           </div>
+
+//         </div>
+
+
+//         {/* ==================================================
+//             SUMMARY CARDS
+//         ================================================== */}
+
+//         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+
+//           {summaryData.map(
+//             (item) => (
+
+//               <SummaryCard
+//                 key={
+//                   item.id
+//                 }
+//                 item={
+//                   item
+//                 }
+//               />
+
+//             )
+//           )}
+
+//         </div>
+
+
+//         {/* ==================================================
+//             MAIN CARD
+//         ================================================== */}
+
+//         <div className="overflow-hidden rounded-[20px] border border-[#E0E6EC] bg-white shadow-[0_2px_5px_rgba(16,24,40,0.04)]">
+
+
+//           {/* ==============================================
+//               TABS
+//           ============================================== */}
+
+//           <div className="border-b border-[#E7EDF2] px-5">
+
+//             <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
+//               {tabs.map(
+//                 (tab) => {
+//                   const active =
+//                     activeTab ===
+//                     tab;
+
+//                   return (
+
+//                     <button
+//                       key={
+//                         tab
+//                       }
+
+//                       onClick={() => {
+//                         setActiveTab(
+//                           tab
+//                         );
+
+//                         setPage(
+//                           1
+//                         );
+//                       }}
+
+//                       className={`relative h-[48px] min-w-[105px] px-4 text-[10px] font-semibold transition ${
+//                         active
+//                           ? "text-[#25B98B]"
+//                           : "text-[#8B99AC] hover:text-[#173247]"
+//                       }`}
+//                     >
+
+//                       {tab}
+
+
+//                       {active && (
+
+//                         <span className="absolute bottom-0 left-4 right-4 h-[3px] rounded-t-full bg-[#25B98B]" />
+
+//                       )}
+
+//                     </button>
+
+//                   );
+//                 }
+//               )}
+
+//             </div>
+
+//           </div>
+
+
+//           {/* ==============================================
+//               FILTER BAR
+//           ============================================== */}
+
+//           <div className="border-b border-[#E7EDF2] bg-white px-5 py-4">
+
+//             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+
+//               <div className="flex flex-1 flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center">
+
+
+//                 {/* SEARCH */}
+
+//                 <div className="relative w-full lg:max-w-[370px]">
+
+//                   <Search
+//                     size={16}
+//                     className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8EA0B7]"
+//                   />
+
+//                   <input
+//                     value={
+//                       search
+//                     }
+
+//                     onChange={(e) =>
+//                       setSearch(
+//                         e.target
+//                           .value
+//                       )
+//                     }
+
+//                     placeholder="Search Property ID, Name, Location..."
+
+//                     className="h-[46px] w-full rounded-[13px] border border-[#DAE3EA] bg-white pl-11 pr-4 text-[10px] font-medium text-[#324B61] outline-none placeholder:text-[#98A5B7] transition focus:border-[#25B98B]"
+//                   />
+
+//                 </div>
+
+
+//                 <FilterBox
+//                   label="All Cities"
+
+//                   value={
+//                     cityFilter
+//                   }
+
+//                   onChange={
+//                     setCityFilter
+//                   }
+
+//                   options={
+//                     cities
+//                   }
+//                 />
+
+
+//                 <FilterBox
+//                   label="All Localities"
+
+//                   value={
+//                     localityFilter
+//                   }
+
+//                   onChange={
+//                     setLocalityFilter
+//                   }
+
+//                   options={
+//                     localities
+//                   }
+//                 />
+
+
+//                 <FilterBox
+//                   label="All Categories"
+
+//                   value={
+//                     categoryFilter
+//                   }
+
+//                   onChange={
+//                     setCategoryFilter
+//                   }
+
+//                   options={[
+//                     "Residential",
+//                     "Commercial",
+//                     "Rental",
+//                     "Sell",
+//                     "Plot/Land",
+//                   ]}
+//                 />
+
+
+//                 <FilterBox
+//                   label="Partner Type"
+
+//                   value={
+//                     partnerTypeFilter
+//                   }
+
+//                   onChange={
+//                     setPartnerTypeFilter
+//                   }
+
+//                   options={[
+//                     "team",
+//                     "single",
+//                   ]}
+//                 />
+
+//               </div>
+
+
+//               <div className="flex items-center justify-end gap-3">
+
+//                 <button
+//                   onClick={
+//                     clearFilters
+//                   }
+//                   className="text-[9px] font-semibold uppercase tracking-wide text-[#8D9CAF] transition hover:text-[#173247]"
+//                 >
+//                   CLEAR
+//                 </button>
+
+
+//                 <button
+//                   type="button"
+//                   className="flex h-[38px] items-center gap-2 rounded-lg bg-[#1F3C50] px-4 text-[9px] font-semibold text-white shadow-[0_4px_18px_rgba(15,47,69,0.04)] transition hover:bg-[#173247]"
+//                 >
+
+//                   <SlidersHorizontal
+//                     size={13}
+//                   />
+
+//                   Apply Filters
+
+//                 </button>
+
+//               </div>
+
+//             </div>
+
+//           </div>
+
+
+//           {/* ==============================================
+//               DESKTOP TABLE
+//           ============================================== */}
+
+//           <div className="hidden w-full md:block">
+
+//             <table className="w-full table-fixed border-collapse">
+
+//               <thead>
+
+//                 <tr className="h-[58px] bg-[#1F3C50]">
+
+//                   <TableHead width="24%">
+//                     PROPERTY
+//                   </TableHead>
+
+//                   <TableHead width="22%">
+//                     DETAILS
+//                   </TableHead>
+
+//                   <TableHead width="22%">
+//                     ASSIGNED PARTNER
+//                   </TableHead>
+
+//                   <TableHead width="14%">
+//                     STATUS
+//                   </TableHead>
+
+//                   <TableHead
+//                     width="18%"
+//                     align="center"
+//                   >
+//                     ACTION
+//                   </TableHead>
+
+//                 </tr>
+
+//               </thead>
+
+
+//               <tbody>
+
+//                 {loading ? (
+
+//                   <tr>
+
+//                     <td
+//                       colSpan={
+//                         5
+//                       }
+//                     >
+//                       <LoadingState />
+//                     </td>
+
+//                   </tr>
+
+//                 ) : paginatedRows.length ===
+//                   0 ? (
+
+//                   <tr>
+
+//                     <td
+//                       colSpan={
+//                         5
+//                       }
+//                     >
+//                       <EmptyState />
+//                     </td>
+
+//                   </tr>
+
+//                 ) : (
+
+//                   paginatedRows.map(
+//                     (item) => (
+
+//                       <PartnerRow
+//                         key={
+//                           item.id
+//                         }
+
+//                         item={
+//                           item
+//                         }
+
+//                         assigning={
+//                           assigningId ===
+//                           item.id
+//                         }
+
+//                         unassigning={
+//                           unassigningId ===
+//                           item.id
+//                         }
+
+//                         onAssign={() =>
+//                           handleAssignPartner(
+//                             item.raw
+//                           )
+//                         }
+
+//                         onUnassign={() =>
+//                           handleUnassignPartner(
+//                             item.raw
+//                           )
+//                         }
+//                       />
+
+//                     )
+//                   )
+
+//                 )}
+
+//               </tbody>
+
+//             </table>
+
+//           </div>
+
+
+//           {/* ==============================================
+//               MOBILE
+//           ============================================== */}
+
+//           <div className="md:hidden">
+
+//             {loading ? (
+
+//               <LoadingState />
+
+//             ) : paginatedRows.length ===
+//               0 ? (
+
+//               <EmptyState />
+
+//             ) : (
+
+//               <div className="divide-y divide-[#E7EDF2]">
+
+//                 {paginatedRows.map(
+//                   (item) => (
+
+//                     <MobilePartnerCard
+//                       key={
+//                         item.id
+//                       }
+
+//                       item={
+//                         item
+//                       }
+
+//                       assigning={
+//                         assigningId ===
+//                         item.id
+//                       }
+
+//                       unassigning={
+//                         unassigningId ===
+//                         item.id
+//                       }
+
+//                       onAssign={() =>
+//                         handleAssignPartner(
+//                           item.raw
+//                         )
+//                       }
+
+//                       onUnassign={() =>
+//                         handleUnassignPartner(
+//                           item.raw
+//                         )
+//                       }
+//                     />
+
+//                   )
+//                 )}
+
+//               </div>
+
+//             )}
+
+//           </div>
+
+
+//           {/* ==============================================
+//               FOOTER
+//           ============================================== */}
+
+//           <div className="flex flex-col gap-3 border-t border-[#E7EDF2] bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+
+//             <p className="text-center text-[10px] font-medium text-[#8B99B1] sm:text-left">
+
+//               Showing{" "}
+
+//               <span className="font-semibold text-[#536779]">
+
+//                 {rows.length
+//                   ? (safePage -
+//                       1) *
+//                       pageSize +
+//                     1
+//                   : 0}
+
+//               </span>
+
+//               {" "}to{" "}
+
+//               <span className="font-semibold text-[#536779]">
+
+//                 {Math.min(
+//                   safePage *
+//                     pageSize,
+//                   rows.length
+//                 )}
+
+//               </span>
+
+//               {" "}of{" "}
+
+//               <span className="font-semibold text-[#536779]">
+//                 {rows.length}
+//               </span>
+
+//               {" "}entries
+
+//             </p>
+
+
+//             <div className="flex items-center justify-center gap-2">
+
+//               <button
+//                 disabled={
+//                   safePage ===
+//                   1
+//                 }
+
+//                 onClick={() =>
+//                   setPage(
+//                     (prev) =>
+//                       Math.max(
+//                         1,
+//                         prev - 1
+//                       )
+//                   )
+//                 }
+
+//                 className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E0E6EC] bg-white text-[#9AA8B8] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-30"
+//               >
+
+//                 <ChevronLeft
+//                   size={14}
+//                 />
+
+//               </button>
+
+
+//               <button className="flex h-8 min-w-8 items-center justify-center rounded-md bg-[#1F3C50] px-2 text-[10px] font-semibold text-white">
+
+//                 {safePage}
+
+//               </button>
+
+
+//               <button
+//                 disabled={
+//                   safePage >=
+//                   totalPages
+//                 }
+
+//                 onClick={() =>
+//                   setPage(
+//                     (prev) =>
+//                       Math.min(
+//                         totalPages,
+//                         prev + 1
+//                       )
+//                   )
+//                 }
+
+//                 className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E0E6EC] bg-white text-[#9AA8B8] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-30"
+//               >
+
+//                 <ChevronRight
+//                   size={14}
+//                 />
+
+//               </button>
+
+//             </div>
+
+//           </div>
+
+//         </div>
+
+//       </div>
+
+//     </div>
+//   );
+// }
+
+
+// // ======================================================
+// // SUMMARY CARD
+// // ======================================================
+
+// function SummaryCard({
+//   item,
+// }) {
+//   const styles = {
+//     total: {
+//       iconBg:
+//         "bg-[#EAFBF6]",
+
+//       iconColor:
+//         "text-[#00B98E]",
+
+//       icon:
+//         <BriefcaseBusiness
+//           size={22}
+//         />,
+//     },
+
+//     unassigned: {
+//       iconBg:
+//         "bg-[#FFF5E8]",
+
+//       iconColor:
+//         "text-[#F79009]",
+
+//       icon:
+//         <Clock3
+//           size={22}
+//         />,
+//     },
+
+//     assigned: {
+//       iconBg:
+//         "bg-[#EAFBF6]",
+
+//       iconColor:
+//         "text-[#00B98E]",
+
+//       icon:
+//         <CheckCircle2
+//           size={22}
+//         />,
+//     },
+
+//     today: {
+//       iconBg:
+//         "bg-[#EEF6FF]",
+
+//       iconColor:
+//         "text-[#2E90FA]",
+
+//       icon:
+//         <ArrowUpRight
+//           size={22}
+//         />,
+//     },
+
+//     partners: {
+//       iconBg:
+//         "bg-[#EAFBF6]",
+
+//       iconColor:
+//         "text-[#00B98E]",
+
+//       icon:
+//         <UsersRound
+//           size={22}
+//         />,
+//     },
+//   };
+
+
+//   const current =
+//     styles[item.id] ||
+//     styles.total;
+
+
+//   return (
+//     <div className="min-h-[155px] rounded-[18px] border border-[#E1E7ED] bg-white p-6 shadow-[0_2px_5px_rgba(15,23,42,0.04)]">
+
+//       <div className="flex items-start justify-between gap-3">
+
+//         <p className="pt-2 text-[10px] font-bold uppercase tracking-[0.25px] text-[#576D86]">
+
+//           {item.label}
+
+//         </p>
+
+
+//         <div
+//           className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[15px] ${current.iconBg} ${current.iconColor}`}
+//         >
+
+//           {current.icon}
+
+//         </div>
+
+//       </div>
+
+
+//       <p className="mt-5 text-[29px] font-bold leading-none text-[#173247]">
+
+//         {Number(
+//           item.value || 0
+//         ).toLocaleString()}
+
+//       </p>
+
+
+//       <p className="mt-3 text-[10px] font-medium text-[#95A3B5]">
+
+//         {item.description}
+
+//       </p>
+
+//     </div>
+//   );
+// }
+
+
+// // ======================================================
+// // DESKTOP ROW
+// // ======================================================
+
+// function PartnerRow({
+//   item,
+//   onAssign,
+//   onUnassign,
+//   assigning,
+//   unassigning,
+// }) {
+//   return (
+//     <tr className="border-b border-[#E7EDF2] bg-white transition hover:bg-[#FAFCFD]">
+
+//       {/* PROPERTY */}
+//       <td className="px-6 py-5 align-middle">
+//         <div className="min-w-0">
+//           <div className="flex items-start gap-3">
+//             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAFBF6] text-[#00A985]">
+//               <Building2 size={17} />
+//             </div>
+
+//             <div className="min-w-0">
+//               <p className="truncate text-[11px] font-bold text-[#173247]">
+//                 {item.propertyName}
+//               </p>
+
+//               <p className="mt-1 text-[9px] font-bold text-[#00A985]">
+//                 {item.propertyId}
+//               </p>
+
+//               <div className="mt-2 flex items-start gap-1.5 text-[8px] font-medium text-[#7F8FA3]">
+//                 <MapPin
+//                   size={11}
+//                   className="mt-[1px] shrink-0"
+//                 />
+//                 <span className="line-clamp-2">
+//                   {item.location}
+//                 </span>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       </td>
+
+//       {/* DETAILS */}
+//       <td className="px-6 py-5 align-middle">
+//         <div className="space-y-1.5 text-[9px]">
+//           <p>
+//             <span className="font-medium text-[#8D9CAF]">Project:</span>{" "}
+//             <span className="font-semibold text-[#435A70]">{item.projectName}</span>
+//           </p>
+
+//           <p>
+//             <span className="font-medium text-[#8D9CAF]">Category:</span>{" "}
+//             <span className="font-semibold text-[#435A70]">{item.propertyType}</span>
+//           </p>
+
+//           <p>
+//             <span className="font-medium text-[#8D9CAF]">Type:</span>{" "}
+//             <span className="font-semibold text-[#435A70]">{item.transactionType}</span>
+//           </p>
+
+//           <p>
+//             <span className="font-medium text-[#8D9CAF]">Size:</span>{" "}
+//             <span className="font-semibold text-[#435A70]">
+//               {item.size} {item.sizeUnit}
+//             </span>
+//           </p>
+
+//           <p>
+//             <span className="font-medium text-[#8D9CAF]">Price:</span>{" "}
+//             <span className="font-bold text-[#173247]">
+//               ₹{Number(item.price || 0).toLocaleString("en-IN")}
+//             </span>
+//           </p>
+//         </div>
+//       </td>
+
+//       {/* ASSIGNED PARTNER */}
+//       <td className="px-6 py-5 align-middle">
+//         {item.assigned ? (
+//           <div className="flex items-center gap-3">
+//             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#BCE8DA] bg-[#EAFBF6] text-[10px] font-bold text-[#009B79]">
+//               {getInitials(item?.assignedPartner?.name)}
+//             </div>
+
+//             <div className="min-w-0">
+//               <p className="truncate text-[10px] font-bold text-[#173247]">
+//                 {item?.assignedPartner?.name || "-"}
+//               </p>
+
+//               <p className="mt-1 text-[8px] font-bold text-[#00A985]">
+//                 {item?.assignedPartner?.partnerCode || "-"}
+//               </p>
+
+//               <p className="mt-1 text-[8px] font-medium capitalize text-[#8C9BAD]">
+//                 {item?.assignedPartner?.partnerType || "-"}
+//               </p>
+//             </div>
+//           </div>
+//         ) : (
+//           <div className="inline-flex items-center gap-2 rounded-full border border-[#E2E7EC] bg-[#F5F7F9] px-3 py-1.5">
+//             <UserRound
+//               size={11}
+//               className="text-[#8595A6]"
+//             />
+//             <span className="text-[8px] font-semibold text-[#7D8C9C]">
+//               Not Assigned
+//             </span>
+//           </div>
+//         )}
+//       </td>
+
+//       {/* STATUS */}
+//       <td className="px-6 py-5 align-middle">
+//         <StatusBadge status={item.status} />
+//       </td>
+
+//       {/* ACTION */}
+//       <td className="px-6 py-5 text-center align-middle">
+//         {item.assigned ? (
+//           <button
+//             type="button"
+//             onClick={onUnassign}
+//             disabled={unassigning}
+//             className="inline-flex h-9 min-w-[125px] items-center justify-center gap-1.5 rounded-lg border border-[#F3D5A6] bg-[#FFF8EB] px-4 text-[9px] font-semibold text-[#D97706] transition hover:bg-[#FFF2D9] disabled:cursor-not-allowed disabled:opacity-60"
+//           >
+//             {unassigning ? (
+//               <>
+//                 <LoaderCircle
+//                   size={12}
+//                   className="animate-spin"
+//                 />
+//                 Unassigning
+//               </>
+//             ) : (
+//               <>
+//                 <UserMinus size={12} />
+//                 Unassign
+//               </>
+//             )}
+//           </button>
+//         ) : (
+//           <button
+//             type="button"
+//             onClick={onAssign}
+//             disabled={assigning}
+//             className="inline-flex h-9 min-w-[125px] items-center justify-center gap-1.5 rounded-lg bg-[#25B98B] px-4 text-[9px] font-semibold text-white shadow-[0_4px_10px_rgba(0,121,107,0.18)] transition hover:bg-[#00695D] disabled:cursor-not-allowed disabled:opacity-60"
+//           >
+//             {assigning ? (
+//               <>
+//                 <LoaderCircle
+//                   size={12}
+//                   className="animate-spin"
+//                 />
+//                 Assigning
+//               </>
+//             ) : (
+//               <>
+//                 <UsersRound size={12} />
+//                 Assign Partner
+//               </>
+//             )}
+//           </button>
+//         )}
+//       </td>
+//     </tr>
+//   );
+// }
+
+
+// // ======================================================
+// // MOBILE CARD
+// // ======================================================
+
+// function MobilePartnerCard({
+//   item,
+//   onAssign,
+//   onUnassign,
+//   assigning,
+//   unassigning,
+// }) {
+//   return (
+//     <div className="bg-white p-4">
+//       <div className="flex items-start gap-3">
+//         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAFBF6] text-[#00A985]">
+//           <Building2 size={17} />
+//         </div>
+
+//         <div className="min-w-0 flex-1">
+//           <p className="text-[9px] font-bold text-[#00A985]">
+//             {item.propertyId}
+//           </p>
+
+//           <h3 className="mt-1 truncate text-[12px] font-bold text-[#173247]">
+//             {item.propertyName}
+//           </h3>
+
+//           <div className="mt-1.5 flex items-center gap-1 text-[9px] text-[#7F8FA3]">
+//             <MapPin size={11} />
+//             <span>{item.location}</span>
+//           </div>
+//         </div>
+//       </div>
+
+//       <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-[#F7F9FA] p-3">
+//         <MobileDetail label="Category" value={item.propertyType} />
+//         <MobileDetail label="Transaction" value={item.transactionType} />
+//         <MobileDetail label="Size" value={`${item.size} ${item.sizeUnit}`} />
+//         <MobileDetail
+//           label="Price"
+//           value={`₹${Number(item.price || 0).toLocaleString("en-IN")}`}
+//         />
+//       </div>
+
+//       {item.assigned && (
+//         <div className="mt-3 rounded-xl border border-[#C7EADF] bg-[#F0FCF8] p-3">
+//           <p className="text-[8px] font-semibold uppercase tracking-wide text-[#8392A4]">
+//             Assigned Partner
+//           </p>
+
+//           <div className="mt-2 flex items-center gap-2">
+//             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[9px] font-bold text-[#008F72]">
+//               {getInitials(item?.assignedPartner?.name)}
+//             </div>
+
+//             <div>
+//               <p className="text-[10px] font-bold text-[#345267]">
+//                 {item?.assignedPartner?.name || "-"}
+//               </p>
+
+//               <p className="mt-0.5 text-[8px] font-semibold text-[#00A985]">
+//                 {item?.assignedPartner?.partnerCode || "-"}
+//               </p>
+
+//               <p className="mt-0.5 text-[8px] capitalize text-[#8291A2]">
+//                 {item?.assignedPartner?.partnerType || "-"}
+//               </p>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       <div className="mt-4 flex items-center justify-between gap-3">
+//         <StatusBadge status={item.status} />
+
+//         {item.assigned ? (
+//           <button
+//             type="button"
+//             onClick={onUnassign}
+//             disabled={unassigning}
+//             className="flex h-9 min-w-[120px] items-center justify-center gap-1.5 rounded-lg border border-[#F3D5A6] bg-[#FFF8EB] px-3 text-[9px] font-semibold text-[#D97706] disabled:opacity-60"
+//           >
+//             {unassigning ? (
+//               <>
+//                 <LoaderCircle
+//                   size={11}
+//                   className="animate-spin"
+//                 />
+//                 Unassigning
+//               </>
+//             ) : (
+//               <>
+//                 <UserMinus size={11} />
+//                 Unassign
+//               </>
+//             )}
+//           </button>
+//         ) : (
+//           <button
+//             type="button"
+//             onClick={onAssign}
+//             disabled={assigning}
+//             className="flex h-9 min-w-[120px] items-center justify-center gap-1.5 rounded-lg bg-[#25B98B] px-3 text-[9px] font-semibold text-white disabled:opacity-60"
+//           >
+//             {assigning ? (
+//               <>
+//                 <LoaderCircle
+//                   size={11}
+//                   className="animate-spin"
+//                 />
+//                 Assigning
+//               </>
+//             ) : (
+//               <>
+//                 <UsersRound size={11} />
+//                 Assign Partner
+//               </>
+//             )}
+//           </button>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+
+// // ======================================================
+// // MOBILE DETAIL
+// // ======================================================
+
+// function MobileDetail({
+//   label,
+//   value,
+// }) {
+//   return (
+//     <div>
+
+//       <p className="text-[7px] font-semibold uppercase tracking-wide text-[#98A4B3]">
+//         {label}
+//       </p>
+
+//       <p className="mt-1 text-[9px] font-semibold text-[#425A70]">
+//         {value || "-"}
+//       </p>
+
+//     </div>
+//   );
+// }
+
+
+// // ======================================================
+// // STATUS BADGE
+// // ======================================================
+
+// function StatusBadge({
+//   status,
+// }) {
+//   const styles = {
+//     Unassigned:
+//       "border-[#F1D6AA] bg-[#FFF8EB] text-[#D97706]",
+
+//     Assigned:
+//       "border-[#BCE8DA] bg-[#EAFBF6] text-[#008F72]",
+//   };
+
+
+//   return (
+//     <span
+//       className={`inline-flex min-w-[88px] items-center justify-center rounded-full border px-3 py-1.5 text-[8px] font-bold ${
+//         styles[status] ||
+//         "border-gray-200 bg-gray-50 text-gray-500"
+//       }`}
+//     >
+
+//       {status}
+
+//     </span>
+//   );
+// }
+
+
+// // ======================================================
+// // FILTER BOX
+// // ======================================================
+
+// function FilterBox({
+//   label,
+//   value,
+//   onChange,
+//   options,
+// }) {
+//   return (
+//     <div className="relative w-full sm:w-[145px]">
+
+//       <select
+//         value={
+//           value
+//         }
+
+//         onChange={(e) =>
+//           onChange(
+//             e.target.value
+//           )
+//         }
+
+//         className="h-[46px] w-full appearance-none rounded-[13px] border border-[#DAE3EA] bg-white pl-4 pr-10 text-[10px] font-semibold capitalize text-[#425A70] outline-none transition focus:border-[#25B98B]"
+//       >
+
+//         <option value="">
+//           {label}
+//         </option>
+
+
+//         {options.map(
+//           (option) => (
+
+//             <option
+//               key={
+//                 option
+//               }
+//               value={
+//                 option
+//               }
+//             >
+//               {capitalize(
+//                 option
+//               )}
+//             </option>
+
+//           )
+//         )}
+
+//       </select>
+
+
+//       <ChevronDown
+//         size={14}
+//         className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8EA0B8]"
+//       />
+
+//     </div>
+//   );
+// }
+
+
+// // ======================================================
+// // TABLE HEAD
+// // ======================================================
+
+// function TableHead({
+//   children,
+//   align = "left",
+//   width,
+// }) {
+//   return (
+//     <th
+//       style={{
+//         width,
+//       }}
+
+//       className={`px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2px] text-white ${
+//         align === "center"
+//           ? "text-center"
+//           : "text-left"
+//       }`}
+//     >
+
+//       {children}
+
+//     </th>
+//   );
+// }
+
+
+// // ======================================================
+// // EMPTY STATE
+// // ======================================================
+
+// function EmptyState() {
+//   return (
+//     <div className="flex min-h-[270px] flex-col items-center justify-center bg-white py-14">
+
+//       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F5F7] text-[#9AA8B4]">
+
+//         <BriefcaseBusiness
+//           size={25}
+//         />
+
+//       </div>
+
+
+//       <p className="mt-4 text-[12px] font-bold text-[#536779]">
+//         No properties found
+//       </p>
+
+
+//       <p className="mt-1 text-[9px] font-medium text-[#98A5B4]">
+//         Try changing filters or refresh the list.
+//       </p>
+
+//     </div>
+//   );
+// }
+
+
+// // ======================================================
+// // LOADING STATE
+// // ======================================================
+
+// function LoadingState() {
+//   return (
+//     <div className="flex min-h-[270px] flex-col items-center justify-center bg-white py-16">
+
+//       <LoaderCircle
+//         size={30}
+//         className="animate-spin text-[#25B98B]"
+//       />
+
+
+//       <p className="mt-4 text-[10px] font-medium text-[#7E8D9E]">
+//         Loading properties...
+//       </p>
+
+//     </div>
+//   );
+// }
+
+
+// // ======================================================
+// // UTILITY
+// // ======================================================
+
+// function capitalize(
+//   value = ""
+// ) {
+//   const text =
+//     String(value);
+
+//   if (!text) {
+//     return "";
+//   }
+
+//   return (
+//     text
+//       .charAt(0)
+//       .toUpperCase() +
+//     text
+//       .slice(1)
+//       .toLowerCase()
+//   );
+// }
+
+
+// function getInitials(
+//   name = ""
+// ) {
+//   const initials =
+//     String(name)
+//       .trim()
+//       .split(" ")
+//       .filter(Boolean)
+//       .map(
+//         (item) =>
+//           item
+//             .charAt(0)
+//             .toUpperCase()
+//       )
+//       .join("")
+//       .slice(0, 2);
+
+//   return (
+//     initials ||
+//     "P"
+//   );
+// }
+
+
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  RefreshCw,
+  Download,
+  Search,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
+  BriefcaseBusiness,
+  Clock3,
+  ArrowUpRight,
+  UsersRound,
+  UserRound,
+  LoaderCircle,
+  CheckCircle2,
+  Building2,
+  UserMinus,
+} from "lucide-react";
+
+import Swal from "sweetalert2";
+
+import {
+  getAssignmentSummaryApi,
+  getAssignmentPropertiesApi,
+  getAvailablePartnersApi,
+  assignPartnerToPropertyApi,
+  unassignPartnerFromPropertyApi,
+} from "../../../Services/partnerService";
+
+
+// ======================================================
+// TABS
+// ======================================================
+
+const tabs = [
+  "All",
+  "Unassigned",
+  "Assigned",
+];
+
+
+// ======================================================
+// MAIN COMPONENT
+// ======================================================
+
+export default function PartnerAssignmentQueue() {
+  // ======================================================
+  // STATES
+  // ======================================================
+
+  const [
+    activeTab,
+    setActiveTab,
+  ] = useState("Unassigned");
+
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    cityFilter,
+    setCityFilter,
+  ] = useState("");
+
+  const [
+    localityFilter,
+    setLocalityFilter,
+  ] = useState("");
+
+  const [
+    categoryFilter,
+    setCategoryFilter,
+  ] = useState("");
+
+  const [
+    partnerTypeFilter,
+    setPartnerTypeFilter,
+  ] = useState("");
+
+  const [
+    properties,
+    setProperties,
+  ] = useState([]);
+
+  const [
+    availablePartners,
+    setAvailablePartners,
+  ] = useState([]);
+
+  const [
+    summary,
+    setSummary,
+  ] = useState({
+    total: 0,
+    unassigned: 0,
+    assigned: 0,
+    assignedToday: 0,
+    availablePartners: 0,
+  });
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    partnersLoading,
+    setPartnersLoading,
+  ] = useState(false);
+
+  const [
+    assigningId,
+    setAssigningId,
+  ] = useState("");
+
+  const [
+    unassigningId,
+    setUnassigningId,
+  ] = useState("");
+
+  const [
+    page,
+    setPage,
+  ] = useState(1);
+
+  const pageSize = 10;
+
+
+  // ======================================================
+  // TAB → API VALUE
+  // ======================================================
+
+  const assignmentType =
+    activeTab === "Assigned"
+      ? "assigned"
+      : activeTab === "Unassigned"
+      ? "unassigned"
+      : "all";
+
+
+  // ======================================================
+  // FETCH SUMMARY
+  // ======================================================
+
+  const fetchSummary =
+    async () => {
+      try {
+        const response =
+          await getAssignmentSummaryApi();
+
+        console.log(
+          "ASSIGNMENT SUMMARY:",
+          response
+        );
+
+        if (response?.success) {
+          setSummary({
+            total:
+              response?.data
+                ?.total || 0,
+
+            unassigned:
+              response?.data
+                ?.unassigned || 0,
+
+            assigned:
+              response?.data
+                ?.assigned || 0,
+
+            assignedToday:
+              response?.data
+                ?.assignedToday || 0,
+
+            availablePartners:
+              response?.data
+                ?.availablePartners || 0,
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Summary Error:",
+          error
+        );
+      }
+    };
+
+
+  // ======================================================
+  // FETCH PROPERTIES
+  // ======================================================
+
+  const fetchProperties =
+    async () => {
+      try {
+        setLoading(true);
+
+        const response =
+          await getAssignmentPropertiesApi({
+            assignment:
+              assignmentType,
+
+            search:
+              search.trim(),
+
+            city:
+              cityFilter,
+
+            locality:
+              localityFilter,
+
+            category:
+              categoryFilter,
+          });
+
+        console.log(
+          "ASSIGNMENT PROPERTIES:",
+          response
+        );
+
+        // if (response?.success) {
+        //   setProperties(
+        //     response?.data || []
+        //   );
+        // } else {
+        //   setProperties([]);
+        // }
+        if (response?.success) {
+  const filteredProperties = (
+    response?.data || []
+  ).filter(
+    (property) =>
+      property?.status
+        ?.toLowerCase()
+        ?.trim() !== "draft"
+  );
+
+  setProperties(filteredProperties);
+} else {
+  setProperties([]);
+}
+      } catch (error) {
+        console.error(
+          "Properties Error:",
+          error
+        );
+
+        setProperties([]);
+
+        await Swal.fire({
+          icon: "error",
+
+          title:
+            "Unable to Load Properties",
+
+          text:
+            error?.response?.data
+              ?.message ||
+            "Unable to fetch properties.",
+
+          confirmButtonColor:
+            "#25B98B",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+
+  // ======================================================
+  // FETCH AVAILABLE PARTNERS
+  // ======================================================
+
+  const fetchAvailablePartners =
+    async (
+      property = null
+    ) => {
+      try {
+        setPartnersLoading(true);
+
+        const params = {};
+
+        // Same city partner ko preference
+        if (
+          property?.city ||
+          property?.location?.city
+        ) {
+          params.city =
+            property.city ||
+            property?.location?.city;
+        }
+
+        if (
+          partnerTypeFilter
+        ) {
+          params.partnerType =
+            partnerTypeFilter;
+        }
+
+        let response =
+          await getAvailablePartnersApi(
+            params
+          );
+
+        // Agar same city me partner nahi mila
+        // to all available partners lao
+        if (
+          response?.success &&
+          response?.data?.length ===
+            0 &&
+          property?.city ||
+          property?.location?.city
+        ) {
+          response =
+            await getAvailablePartnersApi(
+              partnerTypeFilter
+                ? {
+                    partnerType:
+                      partnerTypeFilter,
+                  }
+                : {}
+            );
+        }
+
+        if (response?.success) {
+          setAvailablePartners(
+            response?.data || []
+          );
+
+          return (
+            response?.data || []
+          );
+        }
+
+        setAvailablePartners([]);
+
+        return [];
+      } catch (error) {
+        console.error(
+          "Partners Error:",
+          error
+        );
+
+        setAvailablePartners([]);
+
+        return [];
+      } finally {
+        setPartnersLoading(false);
+      }
+    };
+
+
+  // ======================================================
+  // LOAD DATA
+  // ======================================================
+
+  useEffect(() => {
+    const timer =
+      setTimeout(() => {
+        fetchProperties();
+      }, 300);
+
+    return () =>
+      clearTimeout(timer);
+  }, [
+    assignmentType,
+    search,
+    cityFilter,
+    localityFilter,
+    categoryFilter,
+  ]);
+
+
+  useEffect(() => {
+    fetchSummary();
+  }, []);
+
+
+  useEffect(() => {
+    setPage(1);
+  }, [
+    activeTab,
+    search,
+    cityFilter,
+    localityFilter,
+    categoryFilter,
+  ]);
+
+
+  // ======================================================
+  // FORMAT PROPERTY ROWS
+  // ======================================================
+
+  const rows = useMemo(
+    () =>
+      properties.map((property) => {
+        const location = property?.location || {};
+        const rent = property?.rent || {};
+        const areaDetails = Array.isArray(property?.areaDetails)
+          ? property.areaDetails
+          : [];
+        const displayedArea =
+          areaDetails.find((area) => area?.display) ||
+          areaDetails[0] ||
+          null;
+
+        const assigned = Boolean(
+          property?.assignedPartner?.partnerId
+        );
+
+        const isRent = /rent|lease/i.test(
+          String(
+            property?.transactionType ||
+              property?.listingType ||
+              property?.category ||
+              ""
+          )
+        );
+
+        const priceValue = isRent
+          ? rent?.amount ?? property?.price
+          : typeof property?.price === "object"
+            ? property?.price?.amount
+            : property?.price;
+
+        return {
+          id: property?._id,
+          propertyName: property?.title || "-",
+          propertyId: property?.propertyId || "-",
+          location:
+            [
+              location?.locality || property?.locality,
+              location?.city || property?.city,
+              location?.state || property?.state,
+            ]
+              .filter(Boolean)
+              .join(", ") || "-",
+          city: property?.city || location?.city || "",
+          locality: property?.locality || location?.locality || "",
+          developer: property?.developerName || "",
+          projectName: property?.projectName || "",
+          propertyType: property?.propertyType || "-",
+          category: property?.category || "-",
+          buildingType: property?.buildingType || "-",
+          transactionType: property?.transactionType || "-",
+          listingType: property?.listingType || "-",
+          bhk: property?.bhk || property?.bedrooms || "",
+          price: Number(priceValue || 0),
+          frequency: isRent ? rent?.frequency || "" : "",
+          size:
+            property?.propertySize ??
+            displayedArea?.value ??
+            "",
+          sizeUnit:
+            property?.sizeUnit ||
+            displayedArea?.unit ||
+            "sqft",
+          imageUrl:
+            property?.images?.[0]?.url ||
+            property?.media?.images?.[0]?.url ||
+            "",
+          status: assigned ? "Assigned" : "Unassigned",
+          assigned,
+          assignedPartner: property?.assignedPartner || null,
+          createdAt: property?.createdAt,
+          raw: property,
+        };
+      }),
+    [properties]
+  );
+
+
+  // ======================================================
+  // PAGINATION
+  // ======================================================
+
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        rows.length /
+          pageSize
+      )
+    );
+
+  const safePage =
+    Math.min(
+      page,
+      totalPages
+    );
+
+  const paginatedRows =
+    rows.slice(
+      (safePage - 1) *
+        pageSize,
+
+      safePage *
+        pageSize
+    );
+
+
+  // ======================================================
+  // DYNAMIC FILTER DATA
+  // ======================================================
+
+  const cities =
+    useMemo(
+      () =>
+        [
+          ...new Set(
+            properties
+              .map(
+                (item) =>
+                  item?.city
+              )
+              .filter(Boolean)
+          ),
+        ].sort(),
+      [properties]
+    );
+
+
+  const localities =
+    useMemo(
+      () =>
+        [
+          ...new Set(
+            properties
+              .map(
+                (item) =>
+                  item?.locality
+              )
+              .filter(Boolean)
+          ),
+        ].sort(),
+      [properties]
+    );
+
+
+  // ======================================================
+  // ASSIGN PARTNER
+  // ======================================================
+
+  const handleAssignPartner =
+    async (property) => {
+      const partners =
+        await fetchAvailablePartners(
+          property
+        );
+
+      if (
+        partners.length === 0
+      ) {
+        await Swal.fire({
+          icon: "warning",
+
+          title:
+            "No Partner Available",
+
+          text:
+            "No verified and active partner is currently available.",
+
+          confirmButtonColor:
+            "#25B98B",
+        });
+
+        return;
+      }
+
+
+      const partnerOptions =
+        {};
+
+      partners.forEach(
+        (partner) => {
+          const city =
+            partner
+              ?.location
+              ?.city ||
+            "No Location";
+
+          const type =
+            partner
+              ?.partnerType ||
+            "single";
+
+          const count =
+            partner
+              ?.assignedPropertyCount ||
+            0;
+
+          partnerOptions[
+            partner._id
+          ] =
+            `${partner?.name || "Partner"} | ${
+              partner?.partnerId || "-"
+            } | ${city} | ${capitalize(
+              type
+            )} | ${count} Assigned`;
+        }
+      );
+
+
+      const result =
+        await Swal.fire({
+          title:
+            "Assign Partner",
+
+          html: `
+            <div style="
+              text-align:left;
+              border:1px solid #E4E9EE;
+              background:#F8FAFB;
+              border-radius:12px;
+              padding:14px;
+              margin-bottom:10px;
+              font-size:12px;
+              color:#667085;
+              line-height:1.7;
+            ">
+              <div style="
+                color:#12344D;
+                font-size:14px;
+                font-weight:700;
+              ">
+                ${property?.title || "Property"}
+              </div>
+
+              <div style="
+                color:#25B98B;
+                font-weight:600;
+                margin-top:3px;
+              ">
+                ${property?.propertyId || "-"}
+              </div>
+
+              <div style="
+                margin-top:5px;
+              ">
+                ${
+                  property?.locality || ""
+                }
+                ${
+                  property?.city
+                    ? `, ${property.city}`
+                    : ""
+                }
+              </div>
+            </div>
+          `,
+
+          input:
+            "select",
+
+          inputOptions:
+            partnerOptions,
+
+          inputPlaceholder:
+            "Select available partner",
+
+          showCancelButton:
+            true,
+
+          confirmButtonText:
+            "Assign Partner",
+
+          cancelButtonText:
+            "Cancel",
+
+          confirmButtonColor:
+            "#25B98B",
+
+          cancelButtonColor:
+            "#667085",
+
+          inputValidator:
+            (value) => {
+              if (!value) {
+                return "Please select a partner.";
+              }
+            },
+        });
+
+
+      if (
+        !result.isConfirmed
+      ) {
+        return;
+      }
+
+
+      try {
+        setAssigningId(
+          property._id
+        );
+
+        const savedUser =
+          localStorage.getItem(
+            "user"
+          );
+
+        const loggedUser =
+          savedUser
+            ? JSON.parse(
+                savedUser
+              )
+            : {};
+
+
+        const response =
+          await assignPartnerToPropertyApi(
+            property._id,
+            {
+              partnerId:
+                result.value,
+
+              assignedBy: {
+                userId:
+                  loggedUser?.id,
+
+                name:
+                  loggedUser?.name ||
+                  "Admin",
+
+                role:
+                  loggedUser?.role
+                    ? capitalize(
+                        loggedUser.role
+                      )
+                    : "Admin",
+              },
+            }
+          );
+
+
+        if (response?.success) {
+          await Swal.fire({
+            icon: "success",
+
+            title:
+              "Partner Assigned",
+
+            text:
+              response?.message ||
+              "Partner assigned successfully.",
+
+            confirmButtonColor:
+              "#25B98B",
+          });
+
+          await Promise.all([
+            fetchProperties(),
+            fetchSummary(),
+          ]);
+        } else {
+          throw new Error(
+            response?.message ||
+              "Assignment failed."
+          );
+        }
+      } catch (error) {
+        await Swal.fire({
+          icon: "error",
+
+          title:
+            "Assignment Failed",
+
+          text:
+            error?.response?.data
+              ?.message ||
+            error?.message ||
+            "Unable to assign partner.",
+
+          confirmButtonColor:
+            "#25B98B",
+        });
+      } finally {
+        setAssigningId("");
+      }
+    };
+
+
+  // ======================================================
+  // UNASSIGN PARTNER
+  // ======================================================
+
+  const handleUnassignPartner =
+    async (property) => {
+      try {
+        const partnerName =
+          property
+            ?.assignedPartner
+            ?.name ||
+          "Partner";
+
+        const propertyName =
+          property?.title ||
+          property?.propertyId ||
+          "Property";
+
+        const result =
+          await Swal.fire({
+            title:
+              "Unassign Partner?",
+
+            html: `
+              <div
+                style="
+                  text-align:left;
+                  border:1px solid #E4E9EE;
+                  background:#F8FAFB;
+                  border-radius:12px;
+                  padding:15px;
+                  margin-top:8px;
+                  font-size:12px;
+                  color:#667085;
+                  line-height:1.7;
+                "
+              >
+                <div
+                  style="
+                    color:#12344D;
+                    font-size:14px;
+                    font-weight:700;
+                  "
+                >
+                  ${propertyName}
+                </div>
+
+                <div
+                  style="
+                    color:#25B98B;
+                    font-size:11px;
+                    font-weight:600;
+                    margin-top:3px;
+                  "
+                >
+                  ${property?.propertyId || "-"}
+                </div>
+
+                <div style="margin-top:12px;">
+                  This property is currently assigned to
+                  <strong style="color:#12344D;">
+                    ${partnerName}
+                  </strong>.
+                </div>
+
+                <div style="margin-top:5px;">
+                  Unassigning will remove this property from the partner's assigned properties as well.
+                </div>
+              </div>
+            `,
+
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, Unassign",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#D97706",
+            cancelButtonColor: "#667085",
+            reverseButtons: true,
+          });
+
+        if (!result.isConfirmed) {
+          return;
+        }
+
+        setUnassigningId(
+          property._id
+        );
+
+        const savedUser =
+          localStorage.getItem(
+            "user"
+          );
+
+        const loggedUser =
+          savedUser
+            ? JSON.parse(
+                savedUser
+              )
+            : {};
+
+        const response =
+          await unassignPartnerFromPropertyApi(
+            property._id,
+            {
+              unassignedBy: {
+                userId:
+                  loggedUser?.id,
+
+                name:
+                  loggedUser?.name ||
+                  "Admin",
+
+                role:
+                  loggedUser?.role
+                    ? capitalize(
+                        loggedUser.role
+                      )
+                    : "Admin",
+              },
+
+              remarks:
+                `Property ${property?.propertyId || ""} unassigned from ${partnerName}`,
+            }
+          );
+
+        if (response?.success) {
+          await Swal.fire({
+            icon: "success",
+            title:
+              "Partner Unassigned",
+            text:
+              response?.message ||
+              "Partner removed from property successfully.",
+            confirmButtonColor:
+              "#25B98B",
+          });
+
+          await Promise.all([
+            fetchProperties(),
+            fetchSummary(),
+          ]);
+        } else {
+          throw new Error(
+            response?.message ||
+              "Unable to unassign partner."
+          );
+        }
+      } catch (error) {
+        console.error(
+          "UNASSIGN ERROR:",
+          error
+        );
+
+        await Swal.fire({
+          icon: "error",
+          title:
+            "Unassign Failed",
+          text:
+            error?.response?.data
+              ?.message ||
+            error?.message ||
+            "Unable to unassign partner.",
+          confirmButtonColor:
+            "#25B98B",
+        });
+      } finally {
+        setUnassigningId("");
+      }
+    };
+
+
+  // ======================================================
+  // CLEAR FILTER
+  // ======================================================
+
+  const clearFilters = () => {
+    setSearch("");
+
+    setCityFilter("");
+
+    setLocalityFilter("");
+
+    setCategoryFilter("");
+
+    setPartnerTypeFilter("");
+
+    setPage(1);
+  };
+
+
+  // ======================================================
+  // REFRESH
+  // ======================================================
+
+  const handleRefresh =
+    async () => {
+      await Promise.all([
+        fetchProperties(),
+        fetchSummary(),
+      ]);
+    };
+
+
+  // ======================================================
+  // EXPORT
+  // ======================================================
+
+  const exportList = () => {
+    if (
+      rows.length === 0
+    ) {
+      Swal.fire({
+        icon: "info",
+
+        title:
+          "No Data",
+
+        text:
+          "No properties available to export.",
+
+        confirmButtonColor:
+          "#25B98B",
+      });
+
+      return;
+    }
+
+
+    const header = [
+      "Property ID",
+      "Property Name",
+      "Project",
+      "Location",
+      "Category",
+      "Transaction",
+      "Size",
+      "Price",
+      "Status",
+      "Partner",
+      "Partner ID",
+    ];
+
+
+    const data =
+      rows.map(
+        (item) => [
+          item.propertyId,
+
+          item.propertyName,
+
+          item.projectName,
+
+          item.location,
+
+          item.propertyType,
+
+          item.transactionType,
+
+          `${item.size} ${item.sizeUnit}`,
+
+          item.price,
+
+          item.status,
+
+          item
+            ?.assignedPartner
+            ?.name || "",
+
+          item
+            ?.assignedPartner
+            ?.partnerCode || "",
+        ]
+      );
+
+
+    const csv = [
+      header.join(","),
+
+      ...data.map(
+        (row) =>
+          row
+            .map(
+              (cell) =>
+                `"${String(
+                  cell ?? ""
+                ).replace(
+                  /"/g,
+                  '""'
+                )}"`
+            )
+            .join(",")
+      ),
+    ].join("\n");
+
+
+    const blob =
+      new Blob(
+        [csv],
+        {
+          type:
+            "text/csv;charset=utf-8;",
+        }
+      );
+
+
+    const url =
+      URL.createObjectURL(
+        blob
+      );
+
+
+    const link =
+      document.createElement(
+        "a"
+      );
+
+    link.href = url;
+
+    link.download =
+      "partner-assignment-properties.csv";
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+
+    document.body.removeChild(
+      link
+    );
+
+    URL.revokeObjectURL(
+      url
+    );
+  };
+
+
+  // ======================================================
+  // SUMMARY DATA
+  // ======================================================
+
+  const summaryData = [
+    {
+      id: "total",
+
+      label:
+        "TOTAL PROPERTIES",
+
+      value:
+        summary.total,
+
+      description:
+        "Registered properties",
+    },
+
+    {
+      id:
+        "unassigned",
+
+      label:
+        "AWAITING ASSIGNMENT",
+
+      value:
+        summary.unassigned,
+
+      description:
+        "Requires partner",
+    },
+
+    {
+      id:
+        "assigned",
+
+      label:
+        "ASSIGNED PROPERTIES",
+
+      value:
+        summary.assigned,
+
+      description:
+        "Partner assigned",
+    },
+
+    {
+      id:
+        "today",
+
+      label:
+        "ASSIGNED TODAY",
+
+      value:
+        summary.assignedToday,
+
+      description:
+        "Today's assignments",
+    },
+
+    {
+      id:
+        "partners",
+
+      label:
+        "AVAILABLE PARTNERS",
+
+      value:
+        summary.availablePartners,
+
+      description:
+        "Verified partners",
+    },
+  ];
+
+
+  // ======================================================
+  // UI
+  // ======================================================
+
+  return (
+    <div className="min-h-screen  px-3 py-1 sm:px-1 lg:px-1">
+
+      <div className="mx-auto w-full max-w-[1650px] space-y-4">
+
+
+        <div className="flex flex-col gap-3 px-1 lg:flex-row lg:items-center lg:justify-between">
+
+          <div>
+
+            <h2 className="mt-1 text-2xl font-extrabold text-[#1F3C50]">
+              Partner Assignment Queue
+            </h2>
+
+            <p className="mt-1 text-[10px] font-medium text-[#8998AF] sm:text-[11px]">
+              Assign suitable verified partners to unassigned properties.
+            </p>
+
+          </div>
+
+
+          <div className="flex flex-wrap items-center gap-2">
+
+            <button
+              onClick={
+                handleRefresh
+              }
+              className="flex h-[38px] items-center gap-2 rounded-lg border border-[#DBE3E9] bg-white px-4 text-[10px] font-semibold text-[#536779] shadow-[0_4px_18px_rgba(15,47,69,0.04)] transition hover:bg-[#F8FAFC]"
+            >
+
+              <RefreshCw
+                size={14}
+              />
+
+              Refresh
+
+            </button>
+
+
+            <button
+              onClick={
+                exportList
+              }
+              className="flex h-[38px] items-center gap-2 rounded-lg border border-[#DBE3E9] bg-white px-4 text-[10px] font-semibold text-[#536779] shadow-[0_4px_18px_rgba(15,47,69,0.04)] transition hover:bg-[#F8FAFC]"
+            >
+
+              <Download
+                size={14}
+              />
+
+              Export List
+
+            </button>
+
+          </div>
+
+        </div>
+
+
+        {/* ==================================================
+            SUMMARY CARDS
+        ================================================== */}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+
+          {summaryData.map(
+            (item) => (
+
+              <SummaryCard
+                key={
+                  item.id
+                }
+                item={
+                  item
+                }
+              />
+
+            )
+          )}
+
+        </div>
+
+
+        {/* ==================================================
+            MAIN CARD
+        ================================================== */}
+
+        <div className="overflow-hidden rounded-[20px] border border-[#E0E6EC] bg-white shadow-[0_2px_5px_rgba(16,24,40,0.04)]">
+
+
+          {/* ==============================================
+              TABS
+          ============================================== */}
+
+          <div className="border-b border-[#E7EDF2] px-5">
+
+            <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
+              {tabs.map(
+                (tab) => {
+                  const active =
+                    activeTab ===
+                    tab;
+
+                  return (
+
+                    <button
+                      key={
+                        tab
+                      }
+
+                      onClick={() => {
+                        setActiveTab(
+                          tab
+                        );
+
+                        setPage(
+                          1
+                        );
+                      }}
+
+                      className={`relative h-[48px] min-w-[105px] px-4 text-[10px] font-semibold transition ${
+                        active
+                          ? "text-[#25B98B]"
+                          : "text-[#8B99AC] hover:text-[#173247]"
+                      }`}
+                    >
+
+                      {tab}
+
+
+                      {active && (
+
+                        <span className="absolute bottom-0 left-4 right-4 h-[3px] rounded-t-full bg-[#25B98B]" />
+
+                      )}
+
+                    </button>
+
+                  );
+                }
+              )}
+
+            </div>
+
+          </div>
+
+
+          {/* ==============================================
+              FILTER BAR
+          ============================================== */}
+
+          <div className="border-b border-[#E7EDF2] bg-white px-5 py-4">
+
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+
+              <div className="flex flex-1 flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-center">
+
+
+                {/* SEARCH */}
+
+                <div className="relative w-full lg:max-w-[370px]">
+
+                  <Search
+                    size={16}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8EA0B7]"
+                  />
+
+                  <input
+                    value={
+                      search
+                    }
+
+                    onChange={(e) =>
+                      setSearch(
+                        e.target
+                          .value
+                      )
+                    }
+
+                    placeholder="Search Property ID, Name, Location..."
+
+                    className="h-[46px] w-full rounded-[13px] border border-[#DAE3EA] bg-white pl-11 pr-4 text-[10px] font-medium text-[#324B61] outline-none placeholder:text-[#98A5B7] transition focus:border-[#25B98B]"
+                  />
+
+                </div>
+
+
+                <FilterBox
+                  label="All Cities"
+
+                  value={
+                    cityFilter
+                  }
+
+                  onChange={
+                    setCityFilter
+                  }
+
+                  options={
+                    cities
+                  }
+                />
+
+
+                <FilterBox
+                  label="All Localities"
+
+                  value={
+                    localityFilter
+                  }
+
+                  onChange={
+                    setLocalityFilter
+                  }
+
+                  options={
+                    localities
+                  }
+                />
+
+
+                <FilterBox
+                  label="All Categories"
+
+                  value={
+                    categoryFilter
+                  }
+
+                  onChange={
+                    setCategoryFilter
+                  }
+
+                  options={[
+                    "Residential",
+                    "Commercial",
+                    "Rental",
+                    "Sell",
+                    "Plot/Land",
+                  ]}
+                />
+
+
+                <FilterBox
+                  label="Partner Type"
+
+                  value={
+                    partnerTypeFilter
+                  }
+
+                  onChange={
+                    setPartnerTypeFilter
+                  }
+
+                  options={[
+                    "team",
+                    "single",
+                  ]}
+                />
+
+              </div>
+
+
+              <div className="flex items-center justify-end gap-3">
+
+                <button
+                  onClick={
+                    clearFilters
+                  }
+                  className="text-[9px] font-semibold uppercase tracking-wide text-[#8D9CAF] transition hover:text-[#173247]"
+                >
+                  CLEAR
+                </button>
+
+
+                <button
+                  type="button"
+                  className="flex h-[38px] items-center gap-2 rounded-lg bg-[#1F3C50] px-4 text-[9px] font-semibold text-white shadow-[0_4px_18px_rgba(15,47,69,0.04)] transition hover:bg-[#173247]"
+                >
+
+                  <SlidersHorizontal
+                    size={13}
+                  />
+
+                  Apply Filters
+
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          {/* ==============================================
+              DESKTOP TABLE
+          ============================================== */}
+
+          <div className="hidden w-full md:block">
+
+            <table className="w-full table-fixed border-collapse">
+
+              <thead>
+
+                <tr className="h-[58px] bg-[#1F3C50]">
+
+                  <TableHead width="24%">
+                    PROPERTY
+                  </TableHead>
+
+                  <TableHead width="22%">
+                    DETAILS
+                  </TableHead>
+
+                  <TableHead width="22%">
+                    ASSIGNED PARTNER
+                  </TableHead>
+
+                  <TableHead width="14%">
+                    STATUS
+                  </TableHead>
+
+                  <TableHead
+                    width="18%"
+                    align="center"
+                  >
+                    ACTION
+                  </TableHead>
+
+                </tr>
+
+              </thead>
+
+
+              <tbody>
+
+                {loading ? (
+
+                  <tr>
+
+                    <td
+                      colSpan={
+                        5
+                      }
+                    >
+                      <LoadingState />
+                    </td>
+
+                  </tr>
+
+                ) : paginatedRows.length ===
+                  0 ? (
+
+                  <tr>
+
+                    <td
+                      colSpan={
+                        5
+                      }
+                    >
+                      <EmptyState />
+                    </td>
+
+                  </tr>
+
+                ) : (
+
+                  paginatedRows.map(
+                    (item) => (
+
+                      <PartnerRow
+                        key={
+                          item.id
+                        }
+
+                        item={
+                          item
+                        }
+
+                        assigning={
+                          assigningId ===
+                          item.id
+                        }
+
+                        unassigning={
+                          unassigningId ===
+                          item.id
+                        }
+
+                        onAssign={() =>
+                          handleAssignPartner(
+                            item.raw
+                          )
+                        }
+
+                        onUnassign={() =>
+                          handleUnassignPartner(
+                            item.raw
+                          )
+                        }
+                      />
+
+                    )
+                  )
+
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+
+          {/* ==============================================
+              MOBILE
+          ============================================== */}
+
+          <div className="md:hidden">
+
+            {loading ? (
+
+              <LoadingState />
+
+            ) : paginatedRows.length ===
+              0 ? (
+
+              <EmptyState />
+
+            ) : (
+
+              <div className="divide-y divide-[#E7EDF2]">
+
+                {paginatedRows.map(
+                  (item) => (
+
+                    <MobilePartnerCard
+                      key={
+                        item.id
+                      }
+
+                      item={
+                        item
+                      }
+
+                      assigning={
+                        assigningId ===
+                        item.id
+                      }
+
+                      unassigning={
+                        unassigningId ===
+                        item.id
+                      }
+
+                      onAssign={() =>
+                        handleAssignPartner(
+                          item.raw
+                        )
+                      }
+
+                      onUnassign={() =>
+                        handleUnassignPartner(
+                          item.raw
+                        )
+                      }
+                    />
+
+                  )
+                )}
+
+              </div>
+
+            )}
+
+          </div>
+
+
+          {/* ==============================================
+              FOOTER
+          ============================================== */}
+
+          <div className="flex flex-col gap-3 border-t border-[#E7EDF2] bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+
+            <p className="text-center text-[10px] font-medium text-[#8B99B1] sm:text-left">
+
+              Showing{" "}
+
+              <span className="font-semibold text-[#536779]">
+
+                {rows.length
+                  ? (safePage -
+                      1) *
+                      pageSize +
+                    1
+                  : 0}
+
+              </span>
+
+              {" "}to{" "}
+
+              <span className="font-semibold text-[#536779]">
+
+                {Math.min(
+                  safePage *
+                    pageSize,
+                  rows.length
+                )}
+
+              </span>
+
+              {" "}of{" "}
+
+              <span className="font-semibold text-[#536779]">
+                {rows.length}
+              </span>
+
+              {" "}entries
+
+            </p>
+
+
+            <div className="flex items-center justify-center gap-2">
+
+              <button
+                disabled={
+                  safePage ===
+                  1
+                }
+
+                onClick={() =>
+                  setPage(
+                    (prev) =>
+                      Math.max(
+                        1,
+                        prev - 1
+                      )
+                  )
+                }
+
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E0E6EC] bg-white text-[#9AA8B8] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-30"
+              >
+
+                <ChevronLeft
+                  size={14}
+                />
+
+              </button>
+
+
+              <button className="flex h-8 min-w-8 items-center justify-center rounded-md bg-[#1F3C50] px-2 text-[10px] font-semibold text-white">
+
+                {safePage}
+
+              </button>
+
+
+              <button
+                disabled={
+                  safePage >=
+                  totalPages
+                }
+
+                onClick={() =>
+                  setPage(
+                    (prev) =>
+                      Math.min(
+                        totalPages,
+                        prev + 1
+                      )
+                  )
+                }
+
+                className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E0E6EC] bg-white text-[#9AA8B8] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-30"
+              >
+
+                <ChevronRight
+                  size={14}
+                />
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+
+// ======================================================
+// SUMMARY CARD
+// ======================================================
+
+function SummaryCard({
+  item,
+}) {
+  const styles = {
+    total: {
+      iconBg:
+        "bg-[#EAFBF6]",
+
+      iconColor:
+        "text-[#00B98E]",
+
+      icon:
+        <BriefcaseBusiness
+          size={22}
+        />,
+    },
+
+    unassigned: {
+      iconBg:
+        "bg-[#FFF5E8]",
+
+      iconColor:
+        "text-[#F79009]",
+
+      icon:
+        <Clock3
+          size={22}
+        />,
+    },
+
+    assigned: {
+      iconBg:
+        "bg-[#EAFBF6]",
+
+      iconColor:
+        "text-[#00B98E]",
+
+      icon:
+        <CheckCircle2
+          size={22}
+        />,
+    },
+
+    today: {
+      iconBg:
+        "bg-[#EEF6FF]",
+
+      iconColor:
+        "text-[#2E90FA]",
+
+      icon:
+        <ArrowUpRight
+          size={22}
+        />,
+    },
+
+    partners: {
+      iconBg:
+        "bg-[#EAFBF6]",
+
+      iconColor:
+        "text-[#00B98E]",
+
+      icon:
+        <UsersRound
+          size={22}
+        />,
+    },
+  };
+
+
+  const current =
+    styles[item.id] ||
+    styles.total;
+
+
+  return (
+    <div className="min-h-[155px] rounded-[18px] border border-[#E1E7ED] bg-white p-6 shadow-[0_2px_5px_rgba(15,23,42,0.04)]">
+
+      <div className="flex items-start justify-between gap-3">
+
+        <p className="pt-2 text-[10px] font-bold uppercase tracking-[0.25px] text-[#576D86]">
+
+          {item.label}
+
+        </p>
+
+
+        <div
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[15px] ${current.iconBg} ${current.iconColor}`}
+        >
+
+          {current.icon}
+
+        </div>
+
+      </div>
+
+
+      <p className="mt-5 text-[29px] font-bold leading-none text-[#173247]">
+
+        {Number(
+          item.value || 0
+        ).toLocaleString()}
+
+      </p>
+
+
+      <p className="mt-3 text-[10px] font-medium text-[#95A3B5]">
+
+        {item.description}
+
+      </p>
+
+    </div>
+  );
+}
+
+
+// ======================================================
+// DESKTOP ROW
+// ======================================================
+
+function PartnerRow({
+  item,
+  onAssign,
+  onUnassign,
+  assigning,
+  unassigning,
+}) {
+  const priceLabel = item?.price
+    ? `₹${Number(item.price).toLocaleString("en-IN")}${
+        item.frequency
+          ? ` / ${String(item.frequency).trim().toLowerCase()}`
+          : ""
+      }`
+    : "—";
+
+  return (
+    <tr className="border-b border-[#E7EDF2] bg-white transition hover:bg-[#FAFCFD]">
+      <td className="px-6 py-5 align-middle">
+        <div className="min-w-0">
+          <div className="flex items-start gap-3">
+            {item.imageUrl ? (
+              <img
+                src={item.imageUrl}
+                alt={item.propertyName}
+                className="h-10 w-10 shrink-0 rounded-xl border border-[#E3EBEE] bg-[#F1F5F6] object-cover"
+              />
+            ) : (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAFBF6] text-[#00A985]">
+                <Building2 size={17} />
+              </div>
+            )}
+
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-bold text-[#173247]">
+                {item.propertyName}
+              </p>
+              <p className="mt-1 text-[9px] font-bold text-[#00A985]">
+                {item.propertyId}
+              </p>
+              <div className="mt-2 flex items-start gap-1.5 text-[8px] font-medium text-[#7F8FA3]">
+                <MapPin size={11} className="mt-[1px] shrink-0" />
+                <span className="line-clamp-2">{item.location}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </td>
+
+      <td className="px-6 py-5 align-middle">
+        <div className="space-y-1.5 text-[9px]">
+          {item.projectName && (
+            <p>
+              <span className="font-medium text-[#8D9CAF]">Project:</span>{" "}
+              <span className="font-semibold text-[#435A70]">{item.projectName}</span>
+            </p>
+          )}
+          <p>
+            <span className="font-medium text-[#8D9CAF]">Property Type:</span>{" "}
+            <span className="font-semibold text-[#435A70]">{item.propertyType}</span>
+          </p>
+          <p>
+            <span className="font-medium text-[#8D9CAF]">Category:</span>{" "}
+            <span className="font-semibold text-[#435A70]">{item.category}</span>
+          </p>
+          <p>
+            <span className="font-medium text-[#8D9CAF]">Transaction:</span>{" "}
+            <span className="font-semibold text-[#435A70]">{item.transactionType}</span>
+          </p>
+          {item.bhk && (
+            <p>
+              <span className="font-medium text-[#8D9CAF]">BHK:</span>{" "}
+              <span className="font-semibold text-[#435A70]">{item.bhk}</span>
+            </p>
+          )}
+          <p>
+            <span className="font-medium text-[#8D9CAF]">Size:</span>{" "}
+            <span className="font-semibold text-[#435A70]">
+              {item.size ? `${item.size} ${item.sizeUnit}` : "—"}
+            </span>
+          </p>
+          <p>
+            <span className="font-medium text-[#8D9CAF]">Price:</span>{" "}
+            <span className="font-bold text-[#173247]">{priceLabel}</span>
+          </p>
+        </div>
+      </td>
+
+      <td className="px-6 py-5 align-middle">
+        {item.assigned ? (
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#BCE8DA] bg-[#EAFBF6] text-[10px] font-bold text-[#009B79]">
+              {getInitials(item?.assignedPartner?.name)}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-bold text-[#173247]">{item?.assignedPartner?.name || "-"}</p>
+              <p className="mt-1 text-[8px] font-bold text-[#00A985]">{item?.assignedPartner?.partnerCode || "-"}</p>
+              <p className="mt-1 text-[8px] font-medium capitalize text-[#8C9BAD]">{item?.assignedPartner?.partnerType || "-"}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#E2E7EC] bg-[#F5F7F9] px-3 py-1.5">
+            <UserRound size={11} className="text-[#8595A6]" />
+            <span className="text-[8px] font-semibold text-[#7D8C9C]">Not Assigned</span>
+          </div>
+        )}
+      </td>
+
+      <td className="px-6 py-5 align-middle">
+        <StatusBadge status={item.status} />
+      </td>
+
+      <td className="px-6 py-5 text-center align-middle">
+        {item.assigned ? (
+          <button type="button" onClick={onUnassign} disabled={unassigning} className="inline-flex h-9 min-w-[125px] items-center justify-center gap-1.5 rounded-lg border border-[#F3D5A6] bg-[#FFF8EB] px-4 text-[9px] font-semibold text-[#D97706] transition hover:bg-[#FFF2D9] disabled:cursor-not-allowed disabled:opacity-60">
+            {unassigning ? <><LoaderCircle size={12} className="animate-spin" />Unassigning</> : <><UserMinus size={12} />Unassign</>}
+          </button>
+        ) : (
+          <button type="button" onClick={onAssign} disabled={assigning} className="inline-flex h-9 min-w-[125px] items-center justify-center gap-1.5 rounded-lg bg-[#25B98B] px-4 text-[9px] font-semibold text-white shadow-[0_4px_10px_rgba(0,121,107,0.18)] transition hover:bg-[#00695D] disabled:cursor-not-allowed disabled:opacity-60">
+            {assigning ? <><LoaderCircle size={12} className="animate-spin" />Assigning</> : <><UsersRound size={12} />Assign Partner</>}
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+// ======================================================
+// MOBILE CARD
+// ======================================================
+
+function MobilePartnerCard({
+  item,
+  onAssign,
+  onUnassign,
+  assigning,
+  unassigning,
+}) {
+  const priceLabel = item?.price
+    ? `₹${Number(item.price).toLocaleString("en-IN")}${
+        item.frequency ? ` / ${String(item.frequency).trim().toLowerCase()}` : ""
+      }`
+    : "—";
+
+  return (
+    <div className="bg-white p-4">
+      <div className="flex items-start gap-3">
+        {item.imageUrl ? (
+          <img src={item.imageUrl} alt={item.propertyName} className="h-10 w-10 shrink-0 rounded-xl border border-[#E3EBEE] object-cover" />
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAFBF6] text-[#00A985]"><Building2 size={17} /></div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] font-bold text-[#00A985]">{item.propertyId}</p>
+          <h3 className="mt-1 truncate text-[12px] font-bold text-[#173247]">{item.propertyName}</h3>
+          <div className="mt-1.5 flex items-start gap-1 text-[9px] text-[#7F8FA3]"><MapPin size={11} className="mt-[1px] shrink-0" /><span>{item.location}</span></div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-[#F7F9FA] p-3">
+        <MobileDetail label="Property Type" value={item.propertyType} />
+        <MobileDetail label="Category" value={item.category} />
+        <MobileDetail label="Transaction" value={item.transactionType} />
+        <MobileDetail label="BHK" value={item.bhk || "—"} />
+        <MobileDetail label="Size" value={item.size ? `${item.size} ${item.sizeUnit}` : "—"} />
+        <MobileDetail label="Price" value={priceLabel} />
+      </div>
+
+      {item.assigned && (
+        <div className="mt-3 rounded-xl border border-[#C7EADF] bg-[#F0FCF8] p-3">
+          <p className="text-[8px] font-semibold uppercase tracking-wide text-[#8392A4]">Assigned Partner</p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[9px] font-bold text-[#008F72]">{getInitials(item?.assignedPartner?.name)}</div>
+            <div>
+              <p className="text-[10px] font-bold text-[#345267]">{item?.assignedPartner?.name || "-"}</p>
+              <p className="mt-0.5 text-[8px] font-semibold text-[#00A985]">{item?.assignedPartner?.partnerCode || "-"}</p>
+              <p className="mt-0.5 text-[8px] capitalize text-[#8291A2]">{item?.assignedPartner?.partnerType || "-"}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <StatusBadge status={item.status} />
+        {item.assigned ? (
+          <button type="button" onClick={onUnassign} disabled={unassigning} className="flex h-9 min-w-[120px] items-center justify-center gap-1.5 rounded-lg border border-[#F3D5A6] bg-[#FFF8EB] px-3 text-[9px] font-semibold text-[#D97706] disabled:opacity-60">
+            {unassigning ? <><LoaderCircle size={11} className="animate-spin" />Unassigning</> : <><UserMinus size={11} />Unassign</>}
+          </button>
+        ) : (
+          <button type="button" onClick={onAssign} disabled={assigning} className="flex h-9 min-w-[120px] items-center justify-center gap-1.5 rounded-lg bg-[#25B98B] px-3 text-[9px] font-semibold text-white disabled:opacity-60">
+            {assigning ? <><LoaderCircle size={11} className="animate-spin" />Assigning</> : <><UsersRound size={11} />Assign Partner</>}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+function MobileDetail({
+  label,
+  value,
+}) {
+  return (
+    <div>
+
+      <p className="text-[7px] font-semibold uppercase tracking-wide text-[#98A4B3]">
+        {label}
+      </p>
+
+      <p className="mt-1 text-[9px] font-semibold text-[#425A70]">
+        {value || "-"}
+      </p>
+
+    </div>
+  );
+}
+
+
+// ======================================================
+// STATUS BADGE
+// ======================================================
+
+function StatusBadge({
+  status,
+}) {
+  const styles = {
+    Unassigned:
+      "border-[#F1D6AA] bg-[#FFF8EB] text-[#D97706]",
+
+    Assigned:
+      "border-[#BCE8DA] bg-[#EAFBF6] text-[#008F72]",
+  };
+
+
+  return (
+    <span
+      className={`inline-flex min-w-[88px] items-center justify-center rounded-full border px-3 py-1.5 text-[8px] font-bold ${
+        styles[status] ||
+        "border-gray-200 bg-gray-50 text-gray-500"
+      }`}
+    >
+
+      {status}
+
+    </span>
+  );
+}
+
+
+// ======================================================
+// FILTER BOX
+// ======================================================
+
+function FilterBox({
+  label,
+  value,
+  onChange,
+  options,
+}) {
+  return (
+    <div className="relative w-full sm:w-[145px]">
+
+      <select
+        value={
+          value
+        }
+
+        onChange={(e) =>
+          onChange(
+            e.target.value
+          )
+        }
+
+        className="h-[46px] w-full appearance-none rounded-[13px] border border-[#DAE3EA] bg-white pl-4 pr-10 text-[10px] font-semibold capitalize text-[#425A70] outline-none transition focus:border-[#25B98B]"
+      >
+
+        <option value="">
+          {label}
+        </option>
+
+
+        {options.map(
+          (option) => (
+
+            <option
+              key={
+                option
+              }
+              value={
+                option
+              }
+            >
+              {capitalize(
+                option
+              )}
+            </option>
+
+          )
+        )}
+
+      </select>
+
+
+      <ChevronDown
+        size={14}
+        className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8EA0B8]"
+      />
+
+    </div>
+  );
+}
+
+
+// ======================================================
+// TABLE HEAD
+// ======================================================
+
+function TableHead({
+  children,
+  align = "left",
+  width,
+}) {
+  return (
+    <th
+      style={{
+        width,
+      }}
+
+      className={`px-6 py-4 text-[10px] font-bold uppercase tracking-[0.2px] text-white ${
+        align === "center"
+          ? "text-center"
+          : "text-left"
+      }`}
+    >
+
+      {children}
+
+    </th>
+  );
+}
+
+
+// ======================================================
+// EMPTY STATE
+// ======================================================
+
+function EmptyState() {
+  return (
+    <div className="flex min-h-[270px] flex-col items-center justify-center bg-white py-14">
+
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F0F5F7] text-[#9AA8B4]">
+
+        <BriefcaseBusiness
+          size={25}
+        />
+
+      </div>
+
+
+      <p className="mt-4 text-[12px] font-bold text-[#536779]">
+        No properties found
+      </p>
+
+
+      <p className="mt-1 text-[9px] font-medium text-[#98A5B4]">
+        Try changing filters or refresh the list.
+      </p>
+
+    </div>
+  );
+}
+
+
+// ======================================================
+// LOADING STATE
+// ======================================================
+
+function LoadingState() {
+  return (
+    <div className="flex min-h-[270px] flex-col items-center justify-center bg-white py-16">
+
+      <LoaderCircle
+        size={30}
+        className="animate-spin text-[#25B98B]"
+      />
+
+
+      <p className="mt-4 text-[10px] font-medium text-[#7E8D9E]">
+        Loading properties...
+      </p>
+
+    </div>
+  );
+}
+
+
+// ======================================================
+// UTILITY
+// ======================================================
+
+function capitalize(
+  value = ""
+) {
+  const text =
+    String(value);
+
+  if (!text) {
+    return "";
+  }
+
+  return (
+    text
+      .charAt(0)
+      .toUpperCase() +
+    text
+      .slice(1)
+      .toLowerCase()
+  );
+}
+
+
+function getInitials(
+  name = ""
+) {
+  const initials =
+    String(name)
+      .trim()
+      .split(" ")
+      .filter(Boolean)
+      .map(
+        (item) =>
+          item
+            .charAt(0)
+            .toUpperCase()
+      )
+      .join("")
+      .slice(0, 2);
+
+  return (
+    initials ||
+    "P"
+  );
+}

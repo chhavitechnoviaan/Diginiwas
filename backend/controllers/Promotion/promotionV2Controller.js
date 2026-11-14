@@ -71,6 +71,68 @@ const setPromotionActive = (target, request, expiresAt) => {
   }
 };
 
+// Specialized property models share the newproperties collection with NewProperty.
+// Updating the promotion paths directly avoids validating unrelated legacy
+// NewProperty required fields when approving/rejecting an existing listing.
+const propertyPromotionKey = (request) => {
+  const placement = String(request.planSnapshot?.placement || "").toUpperCase();
+  if (placement === "BOOST") return "boost";
+  if (placement === "FEATURED") return "featured";
+  if (placement === "LOCALITY_TOP") return "localityTop";
+  if (["PROPERTY_BOOST", "PARTNER_BOOST"].includes(request.promotionType)) return "boost";
+  if (["FEATURED_7_DAYS", "PARTNER_FEATURED"].includes(request.promotionType)) return "featured";
+  return "localityTop";
+};
+
+const propertySnapshotChanges = (property, request, status, timestamp, remarks) => {
+  const index = (property.promotionRequests || []).findIndex(
+    item => String(item.requestId) === String(request._id)
+  );
+  if (index < 0) return {};
+  const prefix = `promotionRequests.${index}`;
+  return {
+    [`${prefix}.status`]: status,
+    [`${prefix}.${status === "Approved" ? "approvedAt" : "rejectedAt"}`]: timestamp,
+    [`${prefix}.adminRemarks`]: remarks,
+    ...(status === "Approved" ? { [`${prefix}.expiresAt`]: request.expiresAt || null } : {}),
+  };
+};
+
+const updatePropertyPromotion = async ({ property, request, status, timestamp, remarks, session }) => {
+  const set = propertySnapshotChanges(property, request, status, timestamp, remarks);
+  if (status === "Approved") {
+    const placement = propertyPromotionKey(request);
+    const value = {
+      isActive: true,
+      approvedAt: timestamp,
+      expiresAt: request.expiresAt || null,
+      requestId: request._id,
+      partnerId: request.partnerMongoId,
+    };
+    if (placement === "localityTop") {
+      value.locality = request.locality || property.location?.locality || property.locality || "";
+    }
+    set[`promotions.${placement}`] = value;
+  }
+  const history = {
+    requestId: request._id,
+    promotionType: request.promotionType,
+    action: status,
+    credits: request.creditsCharged,
+    actor: request.reviewedBy,
+    remarks,
+    createdAt: timestamp,
+  };
+  const updated = await Property.updateOne(
+    { _id: property._id },
+    { $set: set, $push: { promotionHistory: history } },
+    { session, runValidators: false },
+  );
+  if (updated.matchedCount !== 1) {
+    throw new Error("Property promotion target disappeared during review");
+  }
+};
+
 const deactivatePromotion = (target, request) => {
   const key = (request.planSnapshot?.placement === "BOOST" || ["PARTNER_BOOST", "PROPERTY_BOOST"].includes(request.promotionType))
     ? "boost"
@@ -281,15 +343,22 @@ export const approvePromotionRequest = async (req, res) => {
       await partner.save({ session });
 
       if (request.targetType === "PROPERTY") {
-        const snap = (target.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
-        if (snap) { snap.status = "Approved"; snap.approvedAt = now; snap.expiresAt = expiresAt; snap.adminRemarks = request.adminRemarks; }
-        target.promotionHistory = target.promotionHistory || []; target.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Approved", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
-        await target.save({ session });
+        await updatePropertyPromotion({
+          property: target, request, status: "Approved", timestamp: now,
+          remarks: request.adminRemarks, session,
+        });
       }
     });
-    await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Approved", message: `Your promotion request has been approved and activated.`, type: "PROMOTION_APPROVED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:approved` });
+    if (request.targetType === "PROPERTY") {
+      target = await Property.findById(request.propertyMongoId).lean();
+    }
+    try {
+      await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Approved", message: `Your promotion request has been approved and activated.`, type: "PROMOTION_APPROVED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:approved` });
+    } catch (notificationError) {
+      console.error("PROMOTION APPROVED NOTIFICATION ERROR:", notificationError);
+    }
     return res.json({ success: true, message: `${request.targetType} promotion approved and activated`, data: { request, target } });
-  } catch (error) { return res.status(error.http || 500).json({ success: false, message: "Unable to approve promotion", error: error.message }); }
+  } catch (error) { console.error("APPROVE PROMOTION ERROR:", error); return res.status(error.http || 500).json({ success: false, message: "Unable to approve promotion", error: error.message }); }
   finally { await session.endSession(); }
 };
 
@@ -340,21 +409,24 @@ export const rejectPromotionRequest = async (req, res) => {
       }
       if (request.targetType === "PROPERTY") {
         const property = await Property.findById(request.propertyMongoId).session(session);
-        if (property) {
-          const snap = (property.promotionRequests || []).find((x) => String(x.requestId) === String(request._id));
-          if (snap) { snap.status = "Rejected"; snap.rejectedAt = now; snap.adminRemarks = request.adminRemarks; }
-          property.promotionHistory = property.promotionHistory || []; property.promotionHistory.push({ requestId: request._id, promotionType: request.promotionType, action: "Rejected", credits: request.creditsCharged, actor: adminActor(req), remarks: request.adminRemarks });
-          await property.save({ session });
-        }
+        if (!property) throw Object.assign(new Error("Property target not found"), { http: 404 });
+        await updatePropertyPromotion({
+          property, request, status: "Rejected", timestamp: now,
+          remarks: request.adminRemarks, session,
+        });
       }
     });
-    await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Rejected", message: "Your promotion request was not approved. View details and the refund status.", type: "PROMOTION_REJECTED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:rejected` });
+    try {
+      await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Rejected", message: "Your promotion request was not approved. View details and the refund status.", type: "PROMOTION_REJECTED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:rejected` });
+    } catch (notificationError) {
+      console.error("PROMOTION REJECTED NOTIFICATION ERROR:", notificationError);
+    }
     return res.json({ success: true, message: "Promotion rejected and credits refunded", data: {
       request,
       wallet: refundResults.at(-1)?.wallet,
       refundTransactions: refundResults.map((item) => item.transaction),
     } });
-  } catch (error) { return res.status(error.http || 500).json({ success: false, message: "Unable to reject promotion", error: error.message }); }
+  } catch (error) { console.error("REJECT PROMOTION ERROR:", error); return res.status(error.http || 500).json({ success: false, message: "Unable to reject promotion", error: error.message }); }
   finally { await session.endSession(); }
 };
 

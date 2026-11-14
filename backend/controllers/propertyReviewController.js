@@ -42,6 +42,21 @@ export const createPropertyReview = async (req, res) => {
   }
 };
 
+// Includes hidden reviews for authenticated Admin management in Property View.
+export const listReviewsForAdminByProperty = async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+    if (!mongoose.isValidObjectId(propertyId)) {
+      return res.status(400).json({ success: false, message: "Invalid property ID." });
+    }
+    const reviews = await PropertyReview.find({ property: propertyId })
+      .sort({ createdAt: -1 }).lean();
+    return res.json({ success: true, count: reviews.length, reviews });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Unable to fetch property reviews." });
+  }
+};
+
 export const listAllReviewsForAdmin = async (_req, res) => {
   try { const reviews = await PropertyReview.find().sort({ createdAt: -1 }).lean(); res.json({ success: true, count: reviews.length, reviews }); }
   catch (error) { res.status(500).json({ success: false, message: error.message }); }

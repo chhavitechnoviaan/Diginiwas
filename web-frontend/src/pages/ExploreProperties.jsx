@@ -3345,7 +3345,10 @@ const parseSeoPath = (seoPath = "") => {
     .replace(/^\/+|\/+$/g, "")
     .toLowerCase();
 
-  if (!value) return null; // Legacy URLs are still understood, but are redirected to the new SEO architecture.
+  // The discovery route is not a city slug.
+  if (!value || value === "explore-property" || value === "explore-properties") return null;
+
+  // Legacy URLs are still understood, but are redirected to the new SEO architecture.
 
   if (
     value.startsWith("buyproperty-in-") ||
@@ -4081,6 +4084,10 @@ export default function ExploreProperties() {
 
   const seo = useMemo(() => parseSeoPath(seoPath), [seoPath]);
 
+  const displayCity = String(
+    seo?.city || filters.city || detectedLocation.city || "Ambala"
+  ).trim() || "Ambala";
+
   useEffect(() => {
     const el = resultsContentRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
@@ -4238,7 +4245,7 @@ export default function ExploreProperties() {
     const requestCity = String(
       // SEO route is authoritative: geolocation/default form values must not
       // replace /properties-in-indore with Jaipur (or any other city).
-      seo?.city || filters.city || detectedLocation.city || "Ambala",
+      displayCity,
     ).trim();
     if (requestCity) params.set("city", requestCity);
     Object.entries(filters).forEach(([key, value]) => {
@@ -4365,7 +4372,7 @@ export default function ExploreProperties() {
   const applyFilters = () => {
     setPage(1);
 
-    const city = filters.city || detectedLocation.city;
+    const city = displayCity;
 
     navigate(
       buildSeoPath({
@@ -5004,12 +5011,12 @@ export default function ExploreProperties() {
                     else applyFilters();
                   }
                 }}
-                placeholder={`Search city, locality, project or property ID · ${filters.city || seo?.city || detectedLocation.city || "Ambala"}`}
+                placeholder={`Search city, locality, project or property ID in ${displayCity}`}
                 aria-label="Search properties and Indian cities"
                 className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#16384B] outline-none placeholder:font-medium placeholder:text-[#8094A0]"
               />
               <span className="hidden max-w-[120px] truncate rounded-full bg-[#E6F5F0] px-3 py-1.5 text-[11px] font-extrabold text-[#087B68] sm:inline-flex">
-                <MapPin size={13} className="mr-1 shrink-0" /> {filters.city || seo?.city || detectedLocation.city || "Ambala"}
+                <MapPin size={13} className="mr-1 shrink-0" /> {displayCity}
               </span>
             </div>
             {citySuggestionsOpen && suggestedCities.length > 0 && (
@@ -5181,12 +5188,10 @@ export default function ExploreProperties() {
             <div>
               <h1 className="text-lg font-black text-[#173B50]">
                 {seo?.allListings
-                  ? `Properties in ${seo.city}`
+                  ? `Properties in ${displayCity}`
                   : seo?.category
-                    ? `${seo.category.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())} in ${filters.locality ? `${filters.locality}, ` : ""}${filters.city}`
-                    : filters.city
-                      ? `${listingType} properties in ${filters.city}`
-                      : `${listingType} properties`}
+                    ? `${seo.category.replace(/-/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())} in ${filters.locality ? `${filters.locality}, ` : ""}${displayCity}`
+                    : `${listingType === "All" ? "All" : listingType} properties in ${displayCity}`}
               </h1>
               <p className="mt-0.5 text-[11px] font-semibold text-[#8AA0AA]">
                 {loading ? "Searching live inventory…" : filteredCountLabel} ·

@@ -1623,6 +1623,9 @@ export const assignPartnerToProperty = async (req, res) => {
 
     if (!property) return res.status(404).json({ success: false, message: "Property not found" });
     if (!partner) return res.status(404).json({ success: false, message: "Partner not found" });
+    if (property?.assignedPartner?.partnerId) {
+      return res.status(409).json({ success: false, message: "Property already has an assigned partner. Unassign it before assigning another." });
+    }
 
     if (!partner.isApproved || !partner.isVerified || partner.isBlocked || partner.applicationStatus !== "Verified" || !partner.permissions?.canReceiveAssignments) {
       return res.status(403).json({ success: false, message: "Property can be assigned only to an approved and verified partner" });
@@ -1648,16 +1651,23 @@ export const assignPartnerToProperty = async (req, res) => {
       assignedAt,
     };
 
-    await propertyCollection.updateOne(
-      { _id: new mongoose.Types.ObjectId(propertyId) },
+    const assignmentWrite = await propertyCollection.updateOne(
+      { _id: new mongoose.Types.ObjectId(propertyId), $or: [
+        { "assignedPartner.partnerId": { $exists: false } },
+        { "assignedPartner.partnerId": null },
+      ] },
       {
         $set: {
           assignedPartner,
-          status: "Assigned_To_Partner",
+          status: property.status === "Live" ? "Live" : "Assigned_To_Partner",
           updatedAt: assignedAt,
         },
       }
     );
+
+    if (assignmentWrite.matchedCount !== 1) {
+      return res.status(409).json({ success: false, message: "Property already has an assigned partner. Refresh and try again." });
+    }
 
     if (previousPartnerId && previousPartnerId !== String(partner._id)) {
       await Partner.updateOne(
@@ -1714,15 +1724,25 @@ export const unassignPartnerFromProperty = async (req, res) => {
     if (!property) return res.status(404).json({ success: false, message: "Property not found" });
 
     const previous = property?.assignedPartner?.partnerId;
+    if (!previous) {
+      return res.status(409).json({ success: false, message: "No partner is assigned to this property." });
+    }
     const updatedAt = new Date();
+    // Unassigning must not unpublish or de-verify a Live property.
+    const nextStatus = property.status === "Assigned_To_Partner" ? "Submitted" : property.status;
 
-    await propertyCollection.updateOne(
-      { _id: new mongoose.Types.ObjectId(propertyId) },
-      {
-        $unset: { assignedPartner: "" },
-        $set: { status: "Submitted", updatedAt },
-      }
+    const update = {
+      $unset: { assignedPartner: "" },
+      $set: { updatedAt },
+    };
+    if (nextStatus && nextStatus !== property.status) update.$set.status = nextStatus;
+    const removal = await propertyCollection.updateOne(
+      { _id: new mongoose.Types.ObjectId(propertyId), "assignedPartner.partnerId": previous },
+      update
     );
+    if (removal.matchedCount !== 1) {
+      return res.status(409).json({ success: false, message: "Partner assignment changed. Refresh and try again." });
+    }
 
     if (previous) {
       await Partner.updateOne(
