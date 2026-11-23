@@ -1,5 +1,5 @@
 import HeroSection from "../../models/HeroSection.js";
-import cloudinary from "../../services/firebaseMediaStorage.js";
+import { destroyMedia } from "../../services/firebaseMediaStorage.js";
 
 export const saveHeroSection = async (req, res) => {
   try {
@@ -28,7 +28,7 @@ hero.localitiesCovered = localitiesCovered;
 
     if (req.files && req.files.heroImage1?.length > 0) {
       if (hero.heroImage1?.public_id) {
-        await cloudinary.uploader.destroy(hero.heroImage1.public_id);
+        await destroyMedia(hero.heroImage1.public_id);
       }
 
       hero.heroImage1 = {
@@ -39,7 +39,7 @@ hero.localitiesCovered = localitiesCovered;
 
     if (req.files && req.files.heroImage2?.length > 0) {
       if (hero.heroImage2?.public_id) {
-        await cloudinary.uploader.destroy(hero.heroImage2.public_id);
+        await destroyMedia(hero.heroImage2.public_id);
       }
 
       hero.heroImage2 = {
@@ -50,7 +50,7 @@ hero.localitiesCovered = localitiesCovered;
 
     if (req.files && req.files.heroImage3?.length > 0) {
       if (hero.heroImage3?.public_id) {
-        await cloudinary.uploader.destroy(hero.heroImage3.public_id);
+        await destroyMedia(hero.heroImage3.public_id);
       }
 
       hero.heroImage3 = {
@@ -108,7 +108,7 @@ export const deleteHeroImage = async (req, res) => {
     const field = `heroImage${imageNo}`;
 
     if (hero[field]?.public_id) {
-      await cloudinary.uploader.destroy(hero[field].public_id);
+      await destroyMedia(hero[field].public_id);
     }
 
     hero[field] = {

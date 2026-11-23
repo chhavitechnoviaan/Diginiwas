@@ -4,7 +4,6 @@ import { Writable, Readable } from "node:stream";
 import { createReadStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { getMediaBucket } from "../config/firebaseStorage.js";
-import legacyCloudinary from "../config/cloudinary.js";
 
 const extensionByMime = new Map([
   ["image/jpeg", ".jpg"], ["image/jpg", ".jpg"], ["image/png", ".png"],
@@ -73,7 +72,10 @@ export async function destroyMedia(publicId, options = {}) {
     await getMediaBucket().file(publicId.slice("firebase:".length)).delete({ ignoreNotFound: true });
     return { result: "ok" };
   }
-  return legacyCloudinary.uploader.destroy(publicId, options);
+  // Legacy Cloudinary media cannot be deleted through Firebase Storage.
+  // Keep its existing URL intact until an explicit one-time migration is performed.
+  console.warn(`[Firebase media] Skipping legacy Cloudinary deletion: ${publicId}`);
+  return { result: "legacy-skipped", migrated: false };
 }
 
 /** Compatibility façade for older CMS controllers using cloudinary.uploader. */

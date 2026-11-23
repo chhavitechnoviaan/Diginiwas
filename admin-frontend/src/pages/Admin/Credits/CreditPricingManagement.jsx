@@ -267,11 +267,11 @@ const ServiceCard = ({
 };
 
 export default function CreditPricingManagement() {
-  // const [
-  //   creditsPerRupee,
-  //   setCreditsPerRupee,
-  // ] = useState(1);
-const [creditsPerRupee, setCreditsPerRupee] = useState(1);
+  const [
+    creditsPerRupee,
+    setCreditsPerRupee,
+  ] = useState(1);
+
   const [
     products,
     setProducts,
