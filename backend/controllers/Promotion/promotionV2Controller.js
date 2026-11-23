@@ -101,7 +101,7 @@ const propertySnapshotChanges = (property, request, status, timestamp, remarks) 
 const updatePropertyPromotion = async ({ property, request, status, timestamp, remarks, session }) => {
   const set = propertySnapshotChanges(property, request, status, timestamp, remarks);
   if (status === "Approved") {
-    const placement = propertyPromotionKey(request);
+    const placement = request.planSnapshot?.placement === "FEATURE_BASED" ? null : propertyPromotionKey(request);
     const value = {
       isActive: true,
       approvedAt: timestamp,
@@ -112,7 +112,8 @@ const updatePropertyPromotion = async ({ property, request, status, timestamp, r
     if (placement === "localityTop") {
       value.locality = request.locality || property.location?.locality || property.locality || "";
     }
-    set[`promotions.${placement}`] = value;
+    if (placement) set[`promotions.${placement}`] = value;
+    set["promotionFeatureKeys"] = request.planSnapshot?.features || [];
   }
   const history = {
     requestId: request._id,
@@ -150,8 +151,8 @@ export const createPromotionRequest = async (req, res) => {
     const partnerId = req.body.partnerId || req.user?.id;
     const targetType = String(req.body.targetType || (req.body.propertyId ? "PROPERTY" : "PARTNER")).toUpperCase();
     const rawCode = String(req.body.promotionType || req.body.planCode || "").trim().toUpperCase();
-    const dynamicPlan = rawCode.startsWith("CUSTOM_") ? await getCreditProduct(rawCode) : null;
-    const promotionType = dynamicPlan && dynamicPlan.targetType === targetType ? rawCode : normalizePromotion(targetType, rawCode);
+    const dynamicPlan = await getCreditProduct(rawCode);
+    const promotionType = dynamicPlan && String(dynamicPlan.targetType).toUpperCase() === targetType ? rawCode : normalizePromotion(targetType, rawCode);
     const remarks = String(req.body.remarks || "").trim();
 
     if (!["PARTNER", "PROPERTY"].includes(targetType)) return res.status(400).json({ success: false, message: "targetType must be PARTNER or PROPERTY" });
@@ -199,7 +200,7 @@ export const createPromotionRequest = async (req, res) => {
         type: "PROMOTION_DEBIT",
         productCode: promotionType,
         referenceType: "PromotionRequest",
-        description: `${plan.label} request - credits reserved pending admin approval`,
+        description: `${plan.label || plan.name} request - credits reserved pending admin approval`,
         metadata: { targetType, propertyMongoId: property?._id || null, propertyCode: property?.propertyId || "" },
         actor,
         idempotencyKey: String(req.body.idempotencyKey || "").trim(),
@@ -225,7 +226,7 @@ export const createPromotionRequest = async (req, res) => {
         planSnapshot: {name:plan.label||plan.name, durationDays:plan.durationDays, placement:plan.placement || (promotionType.includes("LOCALITY_TOP")?"LOCALITY_TOP":promotionType.includes("FEATURED")?"FEATURED":"BOOST"), features:plan.features||[]},
         debitTransactionId: debitResult.transaction._id,
         requestedBy: actor,
-        history: [{ status: "Pending", remarks: remarks || `${plan.label} requested`, actor }],
+        history: [{ status: "Pending", remarks: remarks || `${plan.label || plan.name} requested`, actor }],
       }], { session });
 
       debitResult.transaction.referenceId = request._id;
@@ -350,6 +351,8 @@ export const approvePromotionRequest = async (req, res) => {
       }
     });
     if (request.targetType === "PROPERTY") {
+      const sellerLink = await (await import("../../models/SellerBoostRequest.js")).default.findOneAndUpdate({promotionRequestId:request._id,status:"PendingAdmin"},{$set:{status:"Approved"}});
+      if(sellerLink) await notifyUser({userId:sellerLink.sellerId,userRole:"seller",title:"Promotion activated",message:"Your property promotion is now active.",type:"PROMOTION_APPROVED",entityType:"SellerBoostRequest",entityId:sellerLink._id,eventKey:`seller-promotion:${sellerLink._id}:approved`});
       target = await Property.findById(request.propertyMongoId).lean();
     }
     try {
@@ -394,7 +397,8 @@ export const rejectPromotionRequest = async (req, res) => {
       request.status = "Rejected"; request.rejectedAt = now;
       request.refundTransactionId = refundResults[0]?.transaction?._id || null;
       request.refundTransactionIds = refundResults.map((item) => item.transaction._id);
-      request.reviewedBy = adminActor(req); request.adminRemarks = String(req.body.remarks || "");
+      request.reviewedBy = adminActor(req); request.adminRemarks = String(req.body.remarks || "").trim();
+      if(!request.adminRemarks) throw Object.assign(new Error("Rejection reason is required"),{http:400});
       request.history.push({ status: "Rejected", remarks: request.adminRemarks || "Rejected by admin; credits refunded", actor: adminActor(req) });
       await request.save({ session });
       const partner = await Partner.findById(request.partnerMongoId).session(session);
@@ -417,7 +421,9 @@ export const rejectPromotionRequest = async (req, res) => {
       }
     });
     try {
-      await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Rejected", message: "Your promotion request was not approved. View details and the refund status.", type: "PROMOTION_REJECTED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:rejected` });
+      const sellerLink=await (await import("../../models/SellerBoostRequest.js")).default.findOneAndUpdate({promotionRequestId:request._id,status:"PendingAdmin"},{$set:{status:"RejectedByAdmin",rejectionReason:request.adminRemarks}});
+      if(sellerLink)await notifyUser({userId:sellerLink.sellerId,userRole:"seller",title:"Promotion rejected",message:request.adminRemarks,type:"PROMOTION_REJECTED",entityType:"SellerBoostRequest",entityId:sellerLink._id,eventKey:`seller-promotion:${sellerLink._id}:rejected`});
+      await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Rejected", message: `Promotion rejected: ${request.adminRemarks}. Credits refunded.`, type: "PROMOTION_REJECTED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:rejected` });
     } catch (notificationError) {
       console.error("PROMOTION REJECTED NOTIFICATION ERROR:", notificationError);
     }

@@ -2,6 +2,7 @@ import HeroSection from "../../models/HeroSection.js";
 import NewProperty from "../../models/NewProperty.js";
 import Partner from "../../models/Partner.js";
 import Notification from "../../models/Notification.js";
+import PromotionRequest from "../../models/PromotionRequest.js";
 import {
   getRankedLiveProperties,
   rankPartners,
@@ -425,53 +426,117 @@ export const getNearbyAgents = async (req, res) => {
   }
 };
 
+// Home feed promotion eligibility is derived from approved requests, not legacy boost flags.
+// A request's planSnapshot preserves the purchased features even if Admin edits a plan later.
+const normalizedCity = (value) => String(value || "").trim().toLocaleLowerCase("en-IN");
+const propertyCity = (property) => property.city || property.location?.city || "";
+const liveTimestamp = (property) => {
+  const liveEvents = (property.statusHistory || []).filter((event) => String(event.status).toLowerCase() === "live");
+  const latest = liveEvents.map((event) => new Date(event.updatedAt).getTime()).filter(Number.isFinite).sort((a, b) => b - a)[0];
+  return latest || new Date(property.createdAt || 0).getTime();
+};
+const promotionIsCurrent = (request, now) => request.status === "Approved" &&
+  request.approvedAt && new Date(request.approvedAt) <= now &&
+  request.expiresAt && new Date(request.expiresAt) > now;
+
 export const getHomeFeed = async (req, res) => {
   try {
     const { location } = await resolveBuyerContext(req);
-    const [hero, allLive, agents] = await Promise.all([
+    const now = new Date();
+    const [hero, allLive, agents, activeRequests] = await Promise.all([
       HeroSection.findOne({ isActive: true }).lean(),
       NewProperty.find(livePropertyFilter).lean(),
       Partner.find({ isDeleted: { $ne: true }, isVerified: true, isApproved: true, isBlocked: false, isRejected: false, applicationStatus: "Verified" })
-        .select("-password -identityDocuments -emailVerification.otpHash -phoneVerification.otpHash")
-        .lean(),
+        .select("-password -identityDocuments -emailVerification.otpHash -phoneVerification.otpHash").lean(),
+      PromotionRequest.find({ status: "Approved", approvedAt: { $lte: now }, expiresAt: { $gt: now } })
+        .select("targetType propertyMongoId partnerMongoId promotionType planSnapshot approvedAt expiresAt status").lean(),
     ]);
 
-    const rankedProperties = rankProperties(allLive, location);
-    const sponsored = rankedProperties.filter((p) => p.promotion.sponsored);
-    const rankedAgents = await rankPartners(agents, location);
+    const propertyPromotionMap = new Map();
+    const boostedPartnerIds = new Set();
+    for (const request of activeRequests) {
+      if (!promotionIsCurrent(request, now)) continue;
+      if (request.targetType === "PARTNER") {
+        if (request.promotionType === "PARTNER_BOOST") boostedPartnerIds.add(String(request.partnerMongoId));
+        continue;
+      }
+      if (request.targetType !== "PROPERTY" || !request.propertyMongoId) continue;
+      const key = String(request.propertyMongoId);
+      const current = propertyPromotionMap.get(key) || { features: new Set(), plans: [], expiresAt: null };
+      for (const feature of request.planSnapshot?.features || []) current.features.add(String(feature).toUpperCase());
+      current.plans.push({ code: request.promotionType, name: request.planSnapshot?.name || request.promotionType, expiresAt: request.expiresAt });
+      if (!current.expiresAt || new Date(request.expiresAt) > new Date(current.expiresAt)) current.expiresAt = request.expiresAt;
+      propertyPromotionMap.set(key, current);
+    }
 
+    const prepared = allLive.map((property) => {
+      const active = propertyPromotionMap.get(String(property._id));
+      const features = [...(active?.features || [])];
+      return {
+        ...property,
+        promotion: {
+          boost: false, featured: false, localityTop: false,
+          sponsored: Boolean(active),
+          score: features.includes("PRIORITY_PLACEMENT") ? 20 : active ? 10 : 0,
+          featureKeys: features,
+          plans: active?.plans || [],
+          expiresAt: active?.expiresAt || null,
+          priorityPlacement: features.includes("PRIORITY_PLACEMENT"),
+        },
+      };
+    });
+    // rankProperties recomputes legacy promotion; restore the approved-plan metadata after ranking.
+    const byId = new Map(prepared.map((p) => [String(p._id), p.promotion]));
+    const rankedProperties = rankProperties(prepared, location).map((p) => ({ ...p, promotion: byId.get(String(p._id)) }));
+    const sortPromoted = (items, cityFirst = true) => [...items].sort((a, b) => {
+      if (cityFirst && Boolean(a.sameCity) !== Boolean(b.sameCity)) return a.sameCity ? -1 : 1;
+      if (Boolean(a.promotion.priorityPlacement) !== Boolean(b.promotion.priorityPlacement)) return a.promotion.priorityPlacement ? -1 : 1;
+      if (a.distanceKm != null && b.distanceKm != null && a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+      return liveTimestamp(b) - liveTimestamp(a);
+    });
+    const withFeature = (key) => sortPromoted(rankedProperties.filter((p) => p.promotion.featureKeys.includes(key)));
+    const recommended = withFeature("RECOMMENDED_FOR_YOU");
+    const aiSuggested = withFeature("NIWAS_AI_SUGGESTED_PROPERTIES");
+    const popularNear = withFeature("POPULAR_NEAR_YOUR_LOCATION").filter((p) => normalizedCity(propertyCity(p)) === normalizedCity(location.city));
+    const stories = withFeature("PROPERTY_STORIES");
+    const sponsored = sortPromoted(rankedProperties.filter((p) => p.promotion.sponsored));
+    const rankedAgents = (await rankPartners(agents, location))
+      .filter((partner) => boostedPartnerIds.has(String(partner._id)))
+      .map((partner) => ({ ...partner, promotion: { boost: true, featured: false, localityTop: false, codes: ["PARTNER_BOOST"], score: 10 } }))
+      .sort((a, b) => {
+        if (Boolean(a.sameCity) !== Boolean(b.sameCity)) return a.sameCity ? -1 : 1;
+        if (a.distanceKm != null && b.distanceKm != null && a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
+        return new Date(b.verifiedAt || b.createdAt) - new Date(a.verifiedAt || a.createdAt);
+      });
+
+    const sameCityProperties = rankedProperties.filter((p) => normalizedCity(location.city) && normalizedCity(propertyCity(p)) === normalizedCity(location.city));
+    const newListings = [...sameCityProperties].sort((a, b) => liveTimestamp(b) - liveTimestamp(a)).slice(0, 10);
     const areaMap = new Map();
-    for (const p of rankedProperties) {
-      const key = `${p.city}|${p.locality}`;
-      const item = areaMap.get(key) || { city: p.city, locality: p.locality, propertyCount: 0, image: p.images?.[0]?.url || "" };
+    for (const p of sameCityProperties) {
+      const city = propertyCity(p);
+      const locality = p.locality || p.location?.locality || "";
+      if (!locality) continue;
+      const key = `${normalizedCity(city)}|${normalizedCity(locality)}`;
+      const item = areaMap.get(key) || { city, locality, propertyCount: 0, image: p.images?.[0]?.url || "" };
       item.propertyCount += 1;
+      if (!item.image) item.image = p.images?.[0]?.url || "";
       areaMap.set(key, item);
     }
-    const popularAreas = [...areaMap.values()].sort((a, b) => {
-      const aCity = location.city && String(a.city).toLowerCase() === location.city.toLowerCase();
-      const bCity = location.city && String(b.city).toLowerCase() === location.city.toLowerCase();
-      if (aCity !== bCity) return aCity ? -1 : 1;
-      return b.propertyCount - a.propertyCount;
-    }).slice(0, 10);
-
+    const popularAreas = [...areaMap.values()].sort((a, b) => b.propertyCount - a.propertyCount).slice(0, 10);
     const heroImages = [hero?.heroImage1?.url, hero?.heroImage2?.url, hero?.heroImage3?.url].filter(Boolean);
     const propertyBanners = sponsored.slice(0, 5).map((p) => ({
-      type: "PROPERTY_PROMOTION",
-      image: p.images?.[0]?.url || "",
-      title: p.title,
-      propertyId: p.propertyId,
-      promotion: p.promotion,
+      type: "PROPERTY_PROMOTION", image: p.images?.[0]?.url || "", title: p.title,
+      propertyId: p.propertyId, promotion: p.promotion,
     }));
-
     return ok(res, {
       location,
-      banners: [
-        ...heroImages.map((image) => ({ type: "CMS_HERO", image })),
-        ...propertyBanners,
-      ],
-      recommendedProperties: rankedProperties.slice(0, 12).map(propertyCard),
+      banners: [...heroImages.map((image) => ({ type: "CMS_HERO", image })), ...propertyBanners],
+      recommendedProperties: recommended.slice(0, 12).map(propertyCard),
+      popularNearLocation: popularNear.slice(0, 12).map(propertyCard),
+      niwasAiSuggestedProperties: aiSuggested.slice(0, 12).map(propertyCard),
+      propertyStories: stories.slice(0, 12).map(propertyCard),
       boostedProperties: sponsored.slice(0, 10).map(propertyCard),
-      newListings: [...rankedProperties].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 10).map(propertyCard),
+      newListings: newListings.map((p) => ({ ...propertyCard(p), liveAt: new Date(liveTimestamp(p)).toISOString() })),
       popularAreas,
       agents: rankedAgents.slice(0, 10).map(agentCard),
     }, "Home feed loaded");

@@ -1067,6 +1067,7 @@ const propertySchema = new mongoose.Schema(
       },
     ],
 
+    promotionFeatureKeys: {type:[String],default:[]},
     promotions: {
   boost: {
     isActive: { type: Boolean, default: false, index: true },

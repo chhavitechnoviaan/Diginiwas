@@ -112,7 +112,7 @@ export const getOrCreateCreditSettings = async () => {
 
 export const getCreditProduct = async (code) => {
   const settings = await getOrCreateCreditSettings();
-  return settings.products.find((item) => item.code === code && item.isActive !== false) || await PromotionPlan.findOne({code,isActive:true}).lean();
+  return await PromotionPlan.findOne({code,isActive:true,isDeleted:{$ne:true}}).lean() || settings.products.find((item) => item.code === code && item.isActive !== false) || null;
 };
 
 export const calculateCreditsFromAmount = async (amountInRupees) => {

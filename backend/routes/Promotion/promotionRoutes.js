@@ -3,7 +3,9 @@ import {createPromotionRequest,getPromotionRequests,getMyPromotionRequests,appro
 import {protect,requireAdmin} from "../../middleware/authMiddleware.js";
 import {createSellerBoostRequest,listSellerBoostRequests,getSellerBoostRequest,approveSellerBoostRequest,rejectSellerBoostRequest} from "../../controllers/Promotion/sellerBoostController.js";
 import {activeProperties,activePartners} from "../../controllers/Promotion/activePromotionController.js";
+import {getPromotedPropertiesByFeature} from "../../controllers/Promotion/promotedFeatureController.js";
 const router=express.Router();
+router.get("/active/by-feature",getPromotedPropertiesByFeature);
 router.get("/active/properties",activeProperties);
 router.get("/active/partners",activePartners);
 router.post("/seller-request",protect,createSellerBoostRequest);

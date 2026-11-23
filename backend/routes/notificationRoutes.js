@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { protect } from "../middleware/authMiddleware.js";
 import { listNotifications, markRead, markAllRead, deleteNotification, clearNotifications } from "../controllers/notificationController.js";
+import { registerPushDevice, unregisterPushDevice } from "../controllers/pushDeviceController.js";
 const router = Router();
 router.use(protect);
+router.post("/devices", registerPushDevice);
+router.delete("/devices", unregisterPushDevice);
 router.get("/", listNotifications);
 router.patch("/read-all", markAllRead);
 router.patch("/:id/read", markRead);

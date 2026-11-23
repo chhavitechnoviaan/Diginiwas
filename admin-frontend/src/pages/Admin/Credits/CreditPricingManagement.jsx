@@ -8,8 +8,6 @@ import {
 import {
   BadgeIndianRupee,
   Bolt,
-  Crown,
-  MapPin,
   Save,
   RotateCcw,
   UnlockKeyhole,
@@ -29,38 +27,10 @@ import {
 const PRODUCT_GROUPS = [
   {
     id: "boost",
-    title: "Boost Management",
-    description:
-      "Configure partner and property boost credit charges.",
+    title: "Partner Boost Management",
+    description: "Configure boost credits and duration for partner profiles.",
     icon: Bolt,
-    items: [
-      "PARTNER_BOOST",
-      "PROPERTY_BOOST",
-    ],
-  },
-
-  {
-    id: "featured",
-    title: "Featured Management",
-    description:
-      "Manage featured placement pricing.",
-    icon: Crown,
-    items: [
-      "PARTNER_FEATURED",
-      "FEATURED_7_DAYS",
-    ],
-  },
-
-  {
-    id: "locality",
-    title: "Locality Management",
-    description:
-      "Configure locality top ranking charges.",
-    icon: MapPin,
-    items: [
-      "PARTNER_LOCALITY_TOP",
-      "LOCALITY_TOP_30_DAYS",
-    ],
+    items: ["PARTNER_BOOST"],
   },
 ];
 
@@ -83,50 +53,6 @@ const defaultProducts = [
     isActive: true,
   },
 
-  {
-    code: "PROPERTY_BOOST",
-    label: "Boost Property",
-    credits: 100,
-    targetType: "Property",
-    durationDays: 7,
-    isActive: true,
-  },
-
-  {
-    code: "PARTNER_FEATURED",
-    label: "Featured Partner",
-    credits: 149,
-    targetType: "Partner",
-    durationDays: 7,
-    isActive: true,
-  },
-
-  {
-    code: "FEATURED_7_DAYS",
-    label: "Featured Property",
-    credits: 160,
-    targetType: "Property",
-    durationDays: 7,
-    isActive: true,
-  },
-
-  {
-    code: "PARTNER_LOCALITY_TOP",
-    label: "Partner Locality Top",
-    credits: 200,
-    targetType: "Partner",
-    durationDays: 30,
-    isActive: true,
-  },
-
-  {
-    code: "LOCALITY_TOP_30_DAYS",
-    label: "Property Locality Top",
-    credits: 210,
-    targetType: "Property",
-    durationDays: 30,
-    isActive: true,
-  },
 ];
 
 const getTypeIcon = (
@@ -341,11 +267,11 @@ const ServiceCard = ({
 };
 
 export default function CreditPricingManagement() {
-  const [
-    creditsPerRupee,
-    setCreditsPerRupee,
-  ] = useState(1);
-
+  // const [
+  //   creditsPerRupee,
+  //   setCreditsPerRupee,
+  // ] = useState(1);
+const [creditsPerRupee, setCreditsPerRupee] = useState(1);
   const [
     products,
     setProducts,
@@ -579,15 +505,15 @@ export default function CreditPricingManagement() {
   }
 
   return (
-    <div className="min-h-screen  p-1 md:p-1">
+    <div className="min-h-screen rounded-3xl bg-gradient-to-br from-[#f0f9f6] via-[#f7fafc] to-[#edf5fa] p-1 md:p-1">
       {/* ============================= */}
       {/* TOP TITLE */}
       {/* ============================= */}
 
-      <div className="rounded-[18px]  px-1 py-1 ">
+      <div className="rounded-[22px]  px-5 py-1 shadow-sm md:px-1">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div>
-            <h1 className="mt-1 text-2xl font-extrabold text-[#1F3C50]">
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-[#123c42] md:text-3xl">
               Credit Pricing
               Management
             </h1>
@@ -619,7 +545,7 @@ export default function CreditPricingManagement() {
       {/* SUMMARY */}
       {/* ============================= */}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           icon={
             BadgeIndianRupee
@@ -671,7 +597,7 @@ export default function CreditPricingManagement() {
       {/* CREDIT RATE */}
       {/* ============================= */}
 
-      <div className="mt-4 rounded-[18px] border border-[#d8e1e8] bg-white p-6">
+      <div className="mt-5 rounded-[22px] border border-[#d8e8e5] bg-white p-6 shadow-sm">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#e7f3ff] text-[#2386d9]">
@@ -978,7 +904,7 @@ function SummaryCard({
   subtext,
 }) {
   return (
-    <div className="rounded-[18px] border border-[#d8e1e8] bg-white p-5">
+    <div className="rounded-[20px] border border-[#d8e8e5] bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e8f7f4] text-[#007566]">
           <Icon size={19} />

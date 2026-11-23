@@ -8,7 +8,7 @@ import { createPromotionRequest } from "./promotionV2Controller.js";
 import { notifyUser } from "../../services/notificationService.js";
 import { notifyAdmins } from "../../services/adminNotificationService.js";
 
-const allowed = new Set(["PROPERTY_BOOST", "FEATURED_7_DAYS", "LOCALITY_TOP_30_DAYS"]);
+const allowed = new Set(["STANDARD_BOOSTING", "AI_PROMOTION", "PREMIUM_PROPERTY", "PLATINUM_PROPERTY"]);
 const error = (res, code, message) => res.status(code).json({ success: false, message });
 const role = req => String(req.user?.role || "").toLowerCase();
 const assignedPartner = async property => {
@@ -24,7 +24,7 @@ const ownsProperty = (req, property) =>
 export async function createSellerBoostRequest(req, res) {
   try {
     const { propertyId, promotionType, message = "" } = req.body;
-    if (!mongoose.isValidObjectId(propertyId) || !(allowed.has(promotionType) || (String(promotionType).startsWith("CUSTOM_") && (await getCreditProduct(promotionType))?.targetType === "PROPERTY"))) return error(res, 400, "Valid propertyId and promotionType required");
+    if (!mongoose.isValidObjectId(propertyId) || !(allowed.has(promotionType) || ((await getCreditProduct(promotionType))?.targetType === "PROPERTY"))) return error(res, 400, "Valid propertyId and promotionType required");
     const property = await Property.findById(propertyId);
     if (!property) return error(res, 404, "Property not found");
     if (!ownsProperty(req, property)) return error(res, 403, "Only the property seller can request a boost");
@@ -33,7 +33,7 @@ export async function createSellerBoostRequest(req, res) {
     if (!partner) return error(res, 400, "The property has no assigned partner");
     if (req.body.partnerId && String(req.body.partnerId) !== String(partner._id)) return error(res, 403, "You can only request the assigned partner");
     const plan = await getCreditProduct(promotionType);
-    if (!plan) return error(res, 400, "Credit plan is unavailable");
+    if (!plan || String(plan.targetType).toUpperCase() !== "PROPERTY") return error(res, 400, "Property promotion plan is unavailable");
     const prior = await SellerBoostRequest.findOne({ propertyId: property._id, promotionType, status: { $in: ["PendingPartner", "Processing", "PendingAdmin", "Approved"] } });
     if (prior) return error(res, 409, "An active or pending request for this boost already exists");
     const request = await SellerBoostRequest.create({ sellerId: req.user.id, propertyId, partnerId: partner._id, promotionType, message: String(message).slice(0,1000), creditPriceAtRequest: plan.credits, planSnapshot:{name:plan.name||plan.label,durationDays:plan.durationDays,placement:plan.placement||"BOOST"} });
@@ -56,9 +56,10 @@ export async function listSellerBoostRequests(req, res) {
 
 export async function rejectSellerBoostRequest(req, res) {
   if (role(req) !== "partner") return error(res, 403, "Partner access required");
+  if(!String(req.body.reason||"").trim())return error(res,400,"Rejection reason is required");
   const request = await SellerBoostRequest.findOneAndUpdate({ _id: req.params.id, partnerId: req.user.id, status: "PendingPartner" }, { $set: { status: "RejectedByPartner", rejectionReason: String(req.body.reason || "").slice(0,1000), decidedAt: new Date() } }, { new: true });
   if (!request) return error(res, 409, "Request unavailable or already decided");
-  await notifyUser({ userId: request.sellerId, userRole: "seller", title: "Boost request declined", message: "Your assigned partner declined your property boost request.", type: "SELLER_BOOST_REJECTED", entityType: "SellerBoostRequest", entityId: request._id, eventKey: `seller-boost:${request._id}:rejected` });
+  await notifyUser({ userId: request.sellerId, userRole: "seller", title: "Boost request declined", message: `Your assigned partner declined your promotion: ${request.rejectionReason}`, type: "SELLER_BOOST_REJECTED", entityType: "SellerBoostRequest", entityId: request._id, eventKey: `seller-boost:${request._id}:rejected` });
   return res.json({ success: true, data: request });
 }
 
