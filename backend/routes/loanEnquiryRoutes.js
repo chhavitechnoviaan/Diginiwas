@@ -1,3 +1,5 @@
+import {protect} from "../middleware/authMiddleware.js";
+import {notifyUser} from "../services/notificationService.js";
 import express from "express";
 import nodemailer from "nodemailer";
 
@@ -21,7 +23,7 @@ const escapeHtml = (value = "") =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 
-router.post("/", async (req, res) => {
+router.post("/", (req,res,next)=>req.headers.authorization?protect(req,res,next):next(), async (req, res) => {
   try {
     const {
       fullName,
@@ -107,6 +109,7 @@ router.post("/", async (req, res) => {
       `,
     });
 
+    if (String(req.user?.role).toLowerCase() === "buyer") await notifyUser({userId:req.user.id,userRole:"buyer",type:"BUYER_LOAN_ENQUIRY_SUBMITTED",title:"Home loan enquiry submitted",message:"Your home loan enquiry has been received."});
     return res.status(200).json({
       success: true,
       message: "Loan enquiry submitted successfully.",

@@ -1029,6 +1029,7 @@ export const reviewVisitRequest = async (req, res) => {
 
     const oldStatus = visit.status;
 
+    const previousApproval = visit.approvalStatus;
     visit.approvalStatus = approvalStatus;
     visit.adminRemarks = remarks;
 
@@ -1062,7 +1063,7 @@ export const reviewVisitRequest = async (req, res) => {
     });
 
     await visit.save();
-    if (oldStatus !== visit.status) await sendVisitOutcome(visit, approvalStatus);
+    if (oldStatus !== visit.status || previousApproval !== visit.approvalStatus) await sendVisitOutcome(visit, approvalStatus);
 
     return res.status(200).json({
       success: true,
@@ -1119,6 +1120,7 @@ export const updateVisitStatus = async (req, res) => {
     }
 
     const oldStatus = visit.status;
+    const previousVisitAt = +(visit.approvedVisitAt || visit.requestedVisitAt);
     visit.status = status;
 
     if (outcome) {
@@ -1164,7 +1166,7 @@ export const updateVisitStatus = async (req, res) => {
     });
 
     await visit.save();
-    if (oldStatus !== visit.status && ["Completed", "Cancelled", "Rescheduled"].includes(status)) await sendVisitOutcome(visit, status);
+    if ((oldStatus !== visit.status || (status === "Rescheduled" && previousVisitAt !== +(visit.approvedVisitAt || visit.requestedVisitAt))) && ["Completed", "Cancelled", "Rescheduled"].includes(status)) await sendVisitOutcome(visit, status);
 
     return res.status(200).json({
       success: true,
@@ -1261,6 +1263,7 @@ export const reviewSubAgentVisitByTeamOwner = async (req, res) => {
       visit.history.push({ action: "Forwarded to Admin by Team Owner", fromStatus: "Requested", toStatus: "Requested", remarks, updatedBy: { userId: owner._id, name: owner.name, role: "agency_owner" } });
     }
     await visit.save();
+    if (action === "Reject") await sendVisitOutcome(visit, "Rejected");
     return res.json({ success: true, message: action === "Forward" ? "Visit request forwarded to Admin successfully." : "Visit request rejected by Team Owner.", data: visit });
   } catch (error) { return res.status(500).json({ success: false, message: "Unable to review Sub-Agent visit request.", error: error.message }); }
 };

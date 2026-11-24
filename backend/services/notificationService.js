@@ -1,3 +1,4 @@
+import { queueExternalNotification } from "./externalNotificationService.js";
 import mongoose from "mongoose";
 import Notification from "../models/Notification.js";
 import { pushNotification } from "./pushService.js";
@@ -22,6 +23,7 @@ export async function notifyUser({ userId, userRole, title, message, type = "GEN
       created = true;
     }
     if (created && notification) {
+      try { await queueExternalNotification(notification); } catch (error) { console.error("EXTERNAL NOTIFICATION QUEUE ERROR", error.code || error.name); }
       try { await pushNotification(notification); }
       catch (error) { console.error('PUSH DELIVERY ERROR (in-app notification saved):', error.message); }
     }

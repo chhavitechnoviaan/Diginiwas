@@ -15,7 +15,7 @@ function firebaseApp() {
 }
 
 export async function pushNotification(notification) {
-  if (!['buyer','seller','partner'].includes(notification.userRole)) return { sent: 0 };
+  if (!['buyer','seller','partner','admin'].includes(notification.userRole)) return { sent: 0 };
   const devices = await PushDevice.find({ userId: notification.userId, userRole: notification.userRole, enabled: true }).lean();
   if (!devices.length) return { sent: 0 };
   const tokens = devices.map(d => d.token);

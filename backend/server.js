@@ -1,3 +1,9 @@
+import { startBuyerEventWorker, startBuyerReminders } from "./services/buyerEventWorker.js";
+import { startPartnerEventWorker, startPartnerReminders } from "./services/partnerEventWorker.js";
+import { startSellerEventWorker, startSellerReminders } from "./services/sellerEventWorker.js";
+import { startAdminEventWorker, startPromotionExpiryAlerts } from "./services/adminEventWorker.js";
+import supportRoutes from "./routes/supportRoutes.js";
+import { startNotificationWorker } from "./services/externalNotificationService.js";
 import generalNotificationRoutes from "./routes/notificationRoutes.js";
 import express from "express";
 import multer from "multer";
@@ -65,7 +71,7 @@ import {
   versionedApiHeaders,
 } from "./middleware/apiAccessControl.js";
 
-connectDB();
+connectDB().then(() => { startNotificationWorker(); startBuyerReminders(); startBuyerEventWorker().catch(console.error); startPartnerReminders(); startPartnerEventWorker().catch(console.error); startSellerReminders(); startSellerEventWorker().catch(console.error); startPromotionExpiryAlerts(); startAdminEventWorker().catch(console.error); });
 
 const app = express();
 
@@ -124,6 +130,7 @@ const mountApiRoutes = (basePath) => {
   app.use(`${basePath}/credits`, creditRoutes);
   app.use(`${basePath}/credit-settings`, creditSettingRoutes);
   app.use(`${basePath}/loan-enquiries`, loanEnquiryRoutes);
+  app.use(`${basePath}/support-queries`, supportRoutes);
   app.use(`${basePath}/promotions`, promotionRoutes);
   app.use(`${basePath}/promotion-plans`, promotionPlanRoutes);
   app.use(`${basePath}/boost-operations`, boostDashboardRoutes);

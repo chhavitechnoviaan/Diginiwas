@@ -1987,7 +1987,7 @@ export const requestPartnerAction =
       );
 
       await partner.save();
-      await notifyUser({ userId: partner._id, userRole: "partner", title: "KYC Correction Required", message: "Please update your requested partner application or KYC details.", type: "PARTNER_CORRECTION", entityType: "Partner", entityId: partner._id, actionUrl: "/partner/application", eventKey: `partner:${partner._id}:partner_correction` });
+      await notifyUser({ userId: partner._id, userRole: "partner", title: "KYC Correction Required", message: "Please update your requested partner application or KYC details.", type: "PARTNER_CORRECTION", entityType: "Partner", entityId: partner._id, actionUrl: "/partner/application", eventKey: `partner:${partner._id}:partner_correction:${partner.updatedAt?.getTime()}` });
 
       return res.json({
         success: true,
@@ -2038,6 +2038,9 @@ export const rejectPartnerApplication =
           });
       }
 
+      const reason = String(req.body?.remarks || "").trim();
+      if (!reason) return res.status(400).json({success:false,message:"Rejection reason is required"});
+      if (partner.applicationStatus === "Rejected") return res.status(409).json({success:false,message:"Application already rejected"});
       partner.applicationStatus =
         "Rejected";
 
@@ -2097,7 +2100,7 @@ export const rejectPartnerApplication =
       );
 
       await partner.save();
-      await notifyUser({ userId: partner._id, userRole: "partner", title: "Partner Application Rejected", message: "Your partner application was not approved. View the reason.", type: "PARTNER_REJECTED", entityType: "Partner", entityId: partner._id, actionUrl: "/partner/application", eventKey: `partner:${partner._id}:partner_rejected` });
+      await notifyUser({ userId: partner._id, userRole: "partner", title: "Partner Application Rejected", message: `Your partner application was not approved. Reason: ${reason}`, data: { reason, requestId: partner.partnerId }, type: "PARTNER_REJECTED", entityType: "Partner", entityId: partner._id, actionUrl: "/partner/application", eventKey: `partner:${partner._id}:partner_rejected:${partner.updatedAt?.getTime()}` });
 
       return res.json({
         success: true,

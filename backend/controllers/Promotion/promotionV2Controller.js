@@ -423,7 +423,7 @@ export const rejectPromotionRequest = async (req, res) => {
     try {
       const sellerLink=await (await import("../../models/SellerBoostRequest.js")).default.findOneAndUpdate({promotionRequestId:request._id,status:"PendingAdmin"},{$set:{status:"RejectedByAdmin",rejectionReason:request.adminRemarks}});
       if(sellerLink)await notifyUser({userId:sellerLink.sellerId,userRole:"seller",title:"Promotion rejected",message:request.adminRemarks,type:"PROMOTION_REJECTED",entityType:"SellerBoostRequest",entityId:sellerLink._id,eventKey:`seller-promotion:${sellerLink._id}:rejected`});
-      await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Rejected", message: `Promotion rejected: ${request.adminRemarks}. Credits refunded.`, type: "PROMOTION_REJECTED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:rejected` });
+      await notifyUser({ userId: request.partnerMongoId, userRole: "partner", title: "Promotion Rejected", data: { reason: request.adminRemarks, targetType: request.targetType, requestId: request.requestId || String(request._id), planName: request.planSnapshot?.name || request.promotionType, propertyCode: request.propertyCode, propertyTitle: request.propertyTitle, refundedCredits: request.creditsCharged }, message: `Promotion rejected: ${request.adminRemarks}. Credits refunded.`, type: "PROMOTION_REJECTED", entityType: "PromotionRequest", entityId: request._id, actionUrl: `/promotions/${request._id}`, eventKey: `promotion:${request._id}:rejected` });
     } catch (notificationError) {
       console.error("PROMOTION REJECTED NOTIFICATION ERROR:", notificationError);
     }

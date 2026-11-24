@@ -761,10 +761,10 @@ function RightPhones({ heroData }) {
           <div className="w-2.5 h-0.5 bg-zinc-900 rounded-full opacity-60" />
         </div>
 
-        {/* <div className="absolute top-2 w-full px-4 flex justify-between text-[7px] sm:text-[11px] font-medium text-black/80 z-40 select-none">
+        <div className="absolute top-2 w-full px-4 flex justify-between text-[7px] sm:text-[11px] font-medium text-black/80 z-40 select-none">
             <span>9:41</span>
-            <span>📶 🔋</span>
-          </div> */}
+            <span>ᯤ5G 🪫⚡✈︎</span>
+          </div>
 
         <div className="w-full h-full pt-0 sm:pt-1 bg-white overflow-hidden">
           <img

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 const schema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-  userRole: { type: String, required: true, enum: ['buyer','seller','partner'] },
+  userRole: { type: String, required: true, enum: ['buyer','seller','partner','admin'] },
   token: { type: String, required: true, unique: true },
   platform: { type: String, required: true, enum: ['android','ios','web'] },
   enabled: { type: Boolean, default: true },

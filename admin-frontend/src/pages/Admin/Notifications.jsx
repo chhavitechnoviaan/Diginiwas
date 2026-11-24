@@ -4,16 +4,20 @@ import { Bell, CheckCheck, ChevronRight, Clock3, HandCoins, RefreshCw, ShieldChe
 import AdminModuleShell from "../../components/AdminModuleShell";
 import { getAdminNotificationsApi, markAllNotificationsReadApi, markNotificationReadApi } from "../../Services/notificationService";
 
-const FILTERS = ["All", "Partners", "Properties", "Leads", "Visits", "Promotions", "Payments", "Refunds", "Other"];
+const FILTERS = ["All", "Buyers", "Sellers", "Partners", "Properties", "Support", "Leads", "Visits", "Promotions", "Payments", "Refunds", "Other"];
 const CATEGORY_RULES = [
   ["Refunds", /REFUND/], ["Visits", /VISIT|SITE_VISIT|INSPECTION/],
-  ["Properties", /PROPERTY|DOCUMENT|VERIFICATION|LISTING/],
-  ["Partners", /PARTNER|APPLICATION|ASSIGNMENT|TEAM/],
   ["Promotions", /PROMOTION|BOOST|ADVERTISEMENT/],
   ["Payments", /PAYMENT|CREDIT|WALLET|SUBSCRIPTION|TRANSACTION/],
+  ["Buyers", /BUYER_REGISTERED/], ["Sellers", /SELLER_REGISTERED/],
+  ["Support", /SUPPORT/], ["Partners", /PARTNER|TEAM/],
+  ["Properties", /PROPERTY|DOCUMENT|VERIFICATION|LISTING/],
   ["Leads", /LEAD|INQUIRY|BUYER|SELLER/],
 ];
 const CATEGORY_META = {
+  Buyers: { icon: Users, tone: "bg-blue-50 text-blue-700" },
+  Sellers: { icon: Users, tone: "bg-indigo-50 text-indigo-700" },
+  Support: { icon: Bell, tone: "bg-orange-50 text-orange-700" },
   Partners: { icon: ShieldCheck, tone: "bg-violet-50 text-violet-700" },
   Properties: { icon: Building2, tone: "bg-sky-50 text-sky-700" },
   Leads: { icon: Users, tone: "bg-blue-50 text-blue-700" },
@@ -59,9 +63,9 @@ export default function Notifications() {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
+  const load = async (silent = false) => {
     try {
-      setLoading(true); setError("");
+      if (silent !== true) setLoading(true); setError("");
       const response = await getAdminNotificationsApi({ page, limit: 50,  });
       setItems(response?.data || []); setUnreadCount(response?.unreadCount || 0);
       setPages(response?.pagination?.pages || 1); setTotal(response?.pagination?.total || 0);
@@ -70,11 +74,11 @@ export default function Notifications() {
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); const timer = setInterval(() => load(true), 30000); return () => clearInterval(timer); }, [page]);
   const visibleItems = useMemo(() => items.filter(item => (filter === "All" || categoryOf(item) === filter) && `${item.title || ""} ${item.message || ""} ${item.type || ""}`.toLowerCase().includes(query.toLowerCase())), [items, filter, query]);
   const counts = useMemo(() => ({
-    partner: items.filter((item) => item.type === "PARTNER_APPLICATION").length,
-    operational: items.filter((item) => ["NEW_LEAD", "LEAD_REFUND_REQUEST"].includes(item.type)).length,
+    partner: items.filter((item) => categoryOf(item) === "Partners").length,
+    operational: items.filter((item) => ["Leads", "Refunds", "Visits", "Support"].includes(categoryOf(item))).length,
   }), [items]);
 
   const openNotification = async (item) => {

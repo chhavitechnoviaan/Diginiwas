@@ -1,6 +1,6 @@
 import PushDevice from '../models/PushDevice.js';
 const identity = req => ({ userId: req.user.id, userRole: String(req.user.role || '').toLowerCase() });
-const allowed = req => ['buyer','seller','partner'].includes(identity(req).userRole);
+const allowed = req => ['buyer','seller','partner','admin'].includes(identity(req).userRole);
 export async function registerPushDevice(req, res) {
   if (!allowed(req)) return res.status(403).json({ success: false, message: 'Unsupported role' });
   const { token, platform } = req.body || {};

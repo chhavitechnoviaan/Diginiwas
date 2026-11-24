@@ -53,7 +53,7 @@ export default function AdminNavbar({ onMenuClick }) {
         .catch(() => {});
     loadUnread();
     window.addEventListener("admin-notifications-updated", loadUnread);
-    const timer = setInterval(loadUnread, 60000);
+    const timer = setInterval(loadUnread, 30000);
     return () => {
       clearInterval(timer);
       window.removeEventListener("admin-notifications-updated", loadUnread);
