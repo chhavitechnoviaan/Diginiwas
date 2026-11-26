@@ -67,6 +67,8 @@ const setCommonFields = (set, body, existing) => {
     set.location = body.location;
   }
 
+  for (const key of ["propertyLength","propertyWidth"]) if (body[key] !== undefined) {const v=body[key] === "" || body[key]===null ? null : Number(body[key]); if(v!==null&&(!Number.isFinite(v)||v<=0))throw new Error("Invalid property dimension");set[key]=v;}
+  if(body.dimensionUnit!==undefined){if(!["Feet","Meter"].includes(body.dimensionUnit))throw new Error("Invalid dimension unit");set.dimensionUnit=body.dimensionUnit;}
   if (body.title !== undefined) set.title = body.title;
   if (body.propertyType !== undefined) set.propertyType = body.propertyType;
   if (body.buildingType !== undefined) set.buildingType = body.buildingType;
@@ -354,6 +356,7 @@ export const deleteUnifiedProperty = async (req, res) => {
 export const getUnifiedPropertiesByPartner = async (req, res) => {
   try {
     const partnerId = String(req.params.partnerId || "").trim();
+    if(String(req.user?.role||"").toLowerCase()!=="admin" && String(req.user?.id||"")!==partnerId)return res.status(403).json({success:false,message:"Access denied"});
     if (!partnerId) return res.status(400).json({ success: false, message: "Partner ID is required" });
     const collection = getPropertyCollection();
     const docs = await collection.find({
@@ -363,7 +366,8 @@ export const getUnifiedPropertiesByPartner = async (req, res) => {
         { "assignedPartner.partnerId": objectId(partnerId) || partnerId },
       ],
     }).sort({ createdAt: -1 }).toArray();
-    const properties = docs.map(normalizeUnifiedProperty);
+    const status=String(req.query.status||"").toLowerCase();
+    const properties = docs.map(normalizeUnifiedProperty).filter(p=>!status||String(p.status).toLowerCase()===status);
     return res.json({ success: true, count: properties.length, data: properties, properties });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Unable to get partner properties", error: error.message });

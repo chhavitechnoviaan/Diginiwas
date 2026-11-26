@@ -73,7 +73,10 @@ import {
   verifyCreditPurchase,
 } from "../../controllers/Credit/razorpayCreditController.js";
 
+import {lowCreditStatus} from "../../controllers/Credit/lowCreditController.js";
 const router = express.Router();
+router.get("/low-balance-status",protect,lowCreditStatus);
+router.post("/low-balance-status",protect,lowCreditStatus);
 
 // =====================================================
 // CREDIT DASHBOARD

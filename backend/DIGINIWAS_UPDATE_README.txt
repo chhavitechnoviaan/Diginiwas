@@ -1,0 +1,1 @@
+Source update: see DigiNiwas_App_Developer_Integration.pdf for scope, API changes, limitations and deployment instructions. Restore your original .env locally. Run npm ci and staging tests before deployment.

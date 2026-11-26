@@ -593,6 +593,10 @@ import mongoose from "mongoose";
 
 const propertySchema = new mongoose.Schema(
   {
+    propertyLength: {type:Number,min:0,default:null},
+    propertyWidth: {type:Number,min:0,default:null},
+    dimensionUnit: {type:String,enum:["Feet","Meter"],default:"Feet"},
+
     propertyId: {
       type: String,
       unique: true,

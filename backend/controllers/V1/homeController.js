@@ -501,7 +501,7 @@ export const getHomeFeed = async (req, res) => {
     const stories = withFeature("PROPERTY_STORIES");
     const sponsored = sortPromoted(rankedProperties.filter((p) => p.promotion.sponsored));
     const rankedAgents = (await rankPartners(agents, location))
-      .filter((partner) => boostedPartnerIds.has(String(partner._id)))
+      .filter((partner) => boostedPartnerIds.has(String(partner._id)) && partner.distanceKm != null && partner.distanceKm <= 10)
       .map((partner) => ({ ...partner, promotion: { boost: true, featured: false, localityTop: false, codes: ["PARTNER_BOOST"], score: 10 } }))
       .sort((a, b) => {
         if (Boolean(a.sameCity) !== Boolean(b.sameCity)) return a.sameCity ? -1 : 1;

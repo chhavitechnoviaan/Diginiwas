@@ -84,6 +84,9 @@
 import { protect, requireAdmin } from "./authMiddleware.js";
 
 const PUBLIC_ROUTES = [
+  ["POST", /^\/partner-applications\/[^/]+\/onboarding-session\/?$/],
+  ["GET", /^\/partner-applications\/[^/]+\/onboarding-status\/?$/],
+  ["PATCH", /^\/partner-applications\/[^/]+\/onboarding-status\/?$/],
   // Public plan/feature read endpoints for Seller and Partner plan selection.
   ["GET", /^\/promotion-plans\/?$/],
   ["GET", /^\/promotion-plans\/features\/?$/],

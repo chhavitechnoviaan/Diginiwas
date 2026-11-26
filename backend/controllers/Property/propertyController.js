@@ -2701,6 +2701,9 @@ export const createProperty =
 
       const property =
         await Property.create({
+          propertyLength: req.body.propertyLength || null,
+          propertyWidth: req.body.propertyWidth || null,
+          dimensionUnit: req.body.dimensionUnit || "Feet",
           propertyId,
 
           title:

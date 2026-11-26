@@ -113,6 +113,7 @@ export const normalizeUnifiedProperty = (doc = {}) => {
     latitude: latitude === null || latitude === "" ? null : Number(latitude),
     longitude: longitude === null || longitude === "" ? null : Number(longitude),
     price,
+    propertyLength: doc.propertyLength ?? null, propertyWidth: doc.propertyWidth ?? null, dimensionUnit: doc.dimensionUnit || "Feet",
     propertySize: doc.propertySize ?? displayedArea?.value ?? "",
     sizeUnit: doc.sizeUnit || displayedArea?.unit || "sqft",
     pricePerSqft: doc.pricePerSqft ?? doc.price?.pricePerSqFt ?? null,

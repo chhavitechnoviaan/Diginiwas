@@ -1213,6 +1213,7 @@ export const getSellerProperties = async (
 ) => {
   try {
     const { id } = req.params;
+    if(String(req.user?.role||"").toLowerCase()!=="admin"&&String(req.user?.id||"")!==id)return res.status(403).json({success:false,message:"Access denied"});
 
     if (
       !mongoose.Types.ObjectId.isValid(
@@ -1253,9 +1254,7 @@ export const getSellerProperties = async (
         .sort({ createdAt: -1 });
 
     const data =
-      properties.map(
-        decorateProperty
-      );
+      properties.map(decorateProperty).filter(p=>!req.query.status||String(p.status).toLowerCase()===String(req.query.status).toLowerCase());
 
     return res.status(200).json({
       success: true,

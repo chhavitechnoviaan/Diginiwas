@@ -1,7 +1,11 @@
 import express from "express";
 import { registerPartnerApplication, resendPartnerOtp, verifyPartnerEmailOtp, verifyPartnerPhoneOtp, getPartnerApplications, getPartnerApplicationById, approvePartnerApplication, markPartnerVerified, requestPartnerAction, rejectPartnerApplication } from "../../controllers/Agent/partnerApplicationController.js";
 import { protect, requireAdmin } from "../../middleware/authMiddleware.js";
+import {onboardingSession,onboardingStatus} from "../../controllers/Agent/partnerApplicationController.js";
 const router = express.Router();
+router.post("/:id/onboarding-session",onboardingSession);
+router.get("/:id/onboarding-status",onboardingStatus);
+router.patch("/:id/onboarding-status",onboardingStatus);
 router.post("/register", registerPartnerApplication);
 router.post("/:id/resend-otp", resendPartnerOtp);
 router.patch("/:id/verify-email", verifyPartnerEmailOtp);

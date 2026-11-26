@@ -4,6 +4,7 @@ import PromotionPlan from "../../models/PromotionPlan.js";
 import PromotionFeature from "../../models/PromotionFeature.js";
 import BasicPromotionFeatures from "../../models/BasicPromotionFeatures.js";
 import {getOrCreateCreditSettings} from "../../services/creditPricingService.js";
+const validLabels = v => Array.isArray(v) && v.length <= 30 && v.every(x => typeof x === "string" && x.trim().length > 0 && x.length <= 160);
 const core = new Set(["PARTNER_BOOST","PARTNER_FEATURED","PARTNER_LOCALITY_TOP","PROPERTY_BOOST","FEATURED_7_DAYS","LOCALITY_TOP_30_DAYS"]);
 const placementOf=code => code.includes("LOCALITY_TOP")?"LOCALITY_TOP":code.includes("FEATURED")?"FEATURED":"BOOST";
 export async function ensurePromotionCatalog(){
@@ -26,22 +27,26 @@ export async function getPlans(req,res){try{
  const assigned=new Map(baseAssignments.map(x=>[x.code,x.features]));
  const basics=settings.products.filter(x=>core.has(x.code)).map(x=>({code:x.code,name:x.label,credits:x.credits,durationDays:x.durationDays,targetType:String(x.targetType).toUpperCase(),placement:placementOf(x.code),features:assigned.get(x.code)||[],isActive:x.isActive!==false,isBasic:true}));
  const custom=await PromotionPlan.find({isDeleted:{$ne:true}}).sort({createdAt:1}).lean();
- const all=[...basics.filter(x=>x.targetType!=="PROPERTY"),...custom.map(x=>({...x,isBasic:false}))].filter(x=>(!target||x.targetType===target)&& (res.locals?.includeInactivePromotionPlans === true || x.isActive));
+ const all=[...basics.filter(x=>x.code==="PARTNER_BOOST"),...custom.filter(x=>x.targetType==="PROPERTY").map(x=>({...x,isBasic:false}))].filter(x=>(!target||x.targetType===target)&& (res.locals?.includeInactivePromotionPlans === true || x.isActive));
+ res.set("Cache-Control","no-store");
  return res.json({success:true,data:{plans:all}});
 }catch(e){return res.status(500).json({success:false,message:e.message})}}
 export async function createPlan(req,res){try{
- const {name,targetType,credits,durationDays,placement,features=[],description=""}=req.body;
+ const {name,targetType,credits,durationDays,placement,features=[],displayFeatures=[],description=""}=req.body;
  if(!name||!["PROPERTY","PARTNER"].includes(targetType)||!["BOOST","FEATURED","LOCALITY_TOP","FEATURE_BASED"].includes(placement)||!Number.isFinite(Number(credits))||Number(credits)<0||!Number.isInteger(Number(durationDays))||Number(durationDays)<1||!Array.isArray(features)) return res.status(400).json({success:false,message:"Invalid plan parameters"});
  const code=`CUSTOM_${new mongoose.Types.ObjectId().toString().toUpperCase()}`;
+ if(!validLabels(displayFeatures)) return res.status(400).json({success:false,message:"Invalid display features"});
  const keys=[...new Set(features.map(x=>String(x).trim().toUpperCase()))];
  if(keys.length>30)return res.status(400).json({success:false,message:"Too many features"});
  const available=await validKeys(keys,targetType);
  if(!available)return res.status(400).json({success:false,message:"Select valid Admin-created features for this target"});
- const item=await PromotionPlan.create({code,name:String(name).slice(0,90),description:String(description).slice(0,400),targetType,credits:Number(credits),durationDays:Number(durationDays),placement:targetType==="PROPERTY"?"FEATURE_BASED":placement,features:keys,isActive:true,createdBy:req.user?._id||req.user?.id});
+ const item=await PromotionPlan.create({code,name:String(name).slice(0,90),description:String(description).slice(0,400),targetType,credits:Number(credits),durationDays:Number(durationDays),placement:targetType==="PROPERTY"?"FEATURE_BASED":placement,features:keys,displayFeatures:displayFeatures.map(x=>x.trim()),isActive:true,createdBy:req.user?._id||req.user?.id});
  return res.status(201).json({success:true,data:item});
 }catch(e){return res.status(500).json({success:false,message:e.message})}}
 export async function editPlan(req,res){try{
- const changes={}; for(const k of ["name","description","credits","durationDays","features","isActive"])if(Object.hasOwn(req.body,k))changes[k]=req.body[k];
+ const changes={}; for(const k of ["name","description","credits","durationDays","features","displayFeatures","isActive"])if(Object.hasOwn(req.body,k))changes[k]=req.body[k];
+ if(changes.displayFeatures!==undefined && !validLabels(changes.displayFeatures))return res.status(400).json({success:false,message:"Invalid display features"});
+ if(changes.displayFeatures)changes.displayFeatures=changes.displayFeatures.map(x=>x.trim());
  if(changes.credits!==undefined && (!Number.isFinite(Number(changes.credits))||Number(changes.credits)<0))return res.status(400).json({success:false,message:"Invalid credits"});
  if(changes.durationDays!==undefined && (!Number.isInteger(Number(changes.durationDays))||Number(changes.durationDays)<1))return res.status(400).json({success:false,message:"Invalid duration"});
  if(changes.placement && !["BOOST","FEATURED","LOCALITY_TOP"].includes(changes.placement))return res.status(400).json({success:false,message:"Invalid placement"});

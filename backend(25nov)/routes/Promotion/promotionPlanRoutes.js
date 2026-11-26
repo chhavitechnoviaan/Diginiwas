@@ -1,0 +1,11 @@
+import express from "express";
+import {protect,requireAdmin} from "../../middleware/authMiddleware.js";
+import {getPlans,createPlan,editPlan,listFeatures,createFeature,setPlanFeatures,deletePlan} from "../../controllers/Promotion/promotionPlanController.js";
+const router=express.Router();
+router.get("/features",listFeatures);
+router.post("/features",protect,requireAdmin,createFeature);
+router.patch("/:code/features",protect,requireAdmin,setPlanFeatures);
+router.get("/all",protect,requireAdmin,(req,res)=>{res.locals.includeInactivePromotionPlans=true;return getPlans(req,res)});
+router.delete("/:id",protect,requireAdmin,deletePlan);
+router.get("/",getPlans);router.post("/",protect,requireAdmin,createPlan);router.patch("/:id",protect,requireAdmin,editPlan);
+export default router;

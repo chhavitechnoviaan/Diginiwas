@@ -57,6 +57,7 @@ const INITIAL_FORM_DATA = {
   address: "",
   latitude: "",
   longitude: "",
+  propertyLength: "", propertyWidth: "", dimensionUnit: "Feet",
   propertySize: "",
   sizeUnit: "sqft",
   price: "",
@@ -297,6 +298,7 @@ function SalePropertyForm({ onChangeListingType }) {
           address: property.address || "",
           latitude: property.latitude ?? "",
           longitude: property.longitude ?? "",
+          propertyLength: property.propertyLength ?? "", propertyWidth: property.propertyWidth ?? "", dimensionUnit: property.dimensionUnit || "Feet",
           propertySize: property.propertySize ?? "",
           sizeUnit: property.sizeUnit || "sqft",
           price: property.price ?? "",
@@ -432,6 +434,7 @@ function SalePropertyForm({ onChangeListingType }) {
       "pinCode",
       "address",
       "sizeUnit",
+      "dimensionUnit",
       "bedrooms",
       "bathrooms",
       "balconies",
@@ -447,6 +450,8 @@ function SalePropertyForm({ onChangeListingType }) {
     const numericFields = [
       "latitude",
       "longitude",
+      "propertyLength",
+      "propertyWidth",
       "propertySize",
       "price",
       "maintenance",
@@ -774,6 +779,7 @@ function SalePropertyForm({ onChangeListingType }) {
                     label="Property Description"
                     error={errors.description}
                   >
+                    <button type="button" className="mb-2 rounded border px-3 py-2" onClick={()=>setFormData(p=>({...p,description:[p.title,p.category,p.locality,p.city].filter(Boolean).join(", ")+(Number(p.propertySize)>0?`. Area: ${p.propertySize} ${p.sizeUnit}.`:".")+(p.facing && p.facing!=="N/A"?` Facing: ${p.facing}.`:"")}))}>Auto Description</button>
                     <textarea
                       name="description"
                       value={formData.description}
@@ -856,6 +862,10 @@ function SalePropertyForm({ onChangeListingType }) {
               description="Commercial valuation and usable area details."
             >
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <Field label="Length"><input type="number" min="0" step="any" name="propertyLength" value={formData.propertyLength} onChange={handleChange} className={inputClass}/></Field>
+                <Field label="Width"><input type="number" min="0" step="any" name="propertyWidth" value={formData.propertyWidth} onChange={handleChange} className={inputClass}/></Field>
+                <Field label="Dimension Unit"><SelectInput name="dimensionUnit" value={formData.dimensionUnit} onChange={handleChange} options={["Feet","Meter"]}/></Field>
+                <button type="button" className="rounded border p-2" disabled={!(Number(formData.propertyLength)>0 && Number(formData.propertyWidth)>0) || formData.propertySize!==""} onClick={()=>setFormData(p=>({...p,propertySize:String(Number(p.propertyLength)*Number(p.propertyWidth)),sizeUnit:p.dimensionUnit==="Meter"?"sqm":"sqft"}))}>Calculate area (empty area only)</button>
                 <Field label="Property Size" error={errors.propertySize}>
                   <input
                     name="propertySize"
@@ -1014,8 +1024,7 @@ function SalePropertyForm({ onChangeListingType }) {
                       "North-East",
                       "North-West",
                       "South-East",
-                      "South-West",
-                    ]}
+                      "South-West", "N/A"]}
                   />
                 </Field>
                 <Field label="Furnishing">

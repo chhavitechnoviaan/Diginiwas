@@ -14,7 +14,7 @@ export const RENTAL_ENUMS = {
   furnishingItems: ["Water Purifier", "Fan", "Fridge", "Exhaust Fan", "Dining Table", "Geyser", "Stove", "Light", "Curtains", "Modular Kitchen", "TV", "Chimney", "AC", "Bed", "Wardrobe", "Sofa", "Washing Machine", "Microwave", "Home Automation", "Smart Card Access", "Solar Heater", "Split AC", "VRV AC"],
   waterSources: ["Municipal Supply", "Borewell/Underground", "Tanker", "Others"],
   locationAdvantages: ["Good School in vicinity", "Nearby Metro Station", "Peaceful Vicinity", "Near City Center", "Safe & Secure Locality", "Near Reputed Hospital", "Close to Shopping Mall/Market", "Highway/Expressway Access", "Near IT Park/Business Hub", "Close to Railway Station"],
-  facings: ["East", "West", "North", "South", "North East", "North West", "South East", "South West"],
+  facings: ["East", "West", "North", "South", "North East", "North West", "South East", "South West", "N/A"],
   views: ["Beach View", "Garden View", "Golf Course", "Lake View", "Park View", "Road View", "Community View", "Pool View", "Creek View", "Sea View"],
   flooring: ["Marble", "Concrete", "Cemented", "Carpeted", "Wooden", "Vitrified Tiles", "Wooden Tiles", "Imported Tiles", "Indian Tiles", "Ceramic", "Hardwood", "Carpet", "Others"],
   amenities: ["Gymnasium", "Swimming Pool", "Kids Play Areas", "Jogging/Cycle Track", "Power Backup", "Attached Market", "24 x 7 Security", "Clubhouse", "High Speed Elevators", "Day Care Center", "Party Hall", "EV Charging", "Multi-level Parking", "Multi-purpose Sports Court", "Theatre/Mini Cinema", "Rooftop Deck/Observatory", "Shopping Complex", "Community Shuttle Service", "Central Park"],
@@ -38,6 +38,10 @@ const imageSchema = new Schema({
 }, { _id: true });
 
 const rentalPropertySchema = new Schema({
+    propertyLength: {type:Number,min:0,default:null},
+    propertyWidth: {type:Number,min:0,default:null},
+    dimensionUnit: {type:String,enum:["Feet","Meter"],default:"Feet"},
+
   sourceModel: { type: String, enum: ["RentalProperty", "CommercialRentalProperty"], default: "RentalProperty", index: true },
   title: { type: String, trim: true, maxlength: 180, default: "" },
   transactionType: { type: String, enum: ["Rent"], default: "Rent", immutable: true },

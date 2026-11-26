@@ -157,6 +157,7 @@ export const createPromotionRequest = async (req, res) => {
 
     if (!["PARTNER", "PROPERTY"].includes(targetType)) return res.status(400).json({ success: false, message: "targetType must be PARTNER or PROPERTY" });
     if (!mongoose.Types.ObjectId.isValid(partnerId)) return res.status(400).json({ success: false, message: "Valid partnerId is required" });
+    if (targetType === "PARTNER" && promotionType !== "PARTNER_BOOST") return res.status(400).json({success:false,message:"Only Partner Boost is available"});
     if (!promotionType) return res.status(400).json({ success: false, message: `Invalid promotionType for ${targetType} promotion` });
     if (String(req.user?.role || "").toLowerCase() !== "admin" && String(req.user?.id || "") !== String(partnerId)) {
       return res.status(403).json({ success: false, message: "You can create promotions only for your own partner account" });

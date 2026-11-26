@@ -134,10 +134,10 @@ const normalizeProperty = (p = {}) => {
     coveredParking: Number(p.coveredParking ?? specs.coveredParking ?? 0),
     openParking: Number(p.openParking ?? specs.openParking ?? 0),
     furnishingStatus: p.furnishingStatus ?? p.furnishing?.status ?? "",
-    areaValue: Number(p.areaValue ?? area?.value ?? 0),
-    areaUnit: p.areaUnit ?? area?.unit ?? "Sq. Ft.",
+    areaValue: Number(p.areaValue ?? p.propertySize ?? area?.value ?? 0),
+    areaUnit: p.areaUnit ?? p.sizeUnit ?? area?.unit ?? "Sq. Ft.",
     view: p.view ?? specs.view ?? "",
-    facing: p.facing ?? specs.facing ?? "",
+    facing: ["n/a","na"].includes(String(p.facing ?? specs.facing ?? "").toLowerCase()) ? "" : (p.facing ?? specs.facing ?? ""),
     liftAvailable: p.liftAvailable ?? specs.liftAvailable ?? null,
     powerBackup: p.powerBackup ?? specs.powerBackup ?? null,
     floorNumber: p.floorNumber ?? p.floor ?? specs.floorNumber ?? "",
@@ -228,7 +228,7 @@ function SectionTitle({ eyebrow, title, icon: Icon }) {
 
 function DetailBox({ label, value, icon: Icon }) {
   return (
-    <div className="rounded-xl border border-[#E0EAEC] bg-[#FBFDFD] p-3.5">
+    <div className="min-w-[110px] shrink-0 rounded-xl border border-[#E0EAEC] bg-[#FBFDFD] p-3.5">
       {Icon ? <Icon size={17} className="text-[#20BE91]" /> : null}
       <p className="mt-2 text-[9px] font-black uppercase tracking-[0.08em] text-[#8A9AA1]">
         {label}
@@ -1554,7 +1554,9 @@ export default function PropertyDetails() {
 
   const quickFacts = property
     ? [
-        property.bhk && {
+        property.areaValue > 0 && {icon:Ruler,label:"Area",value:`${property.areaValue.toLocaleString("en-IN")} ${property.areaUnit}${Number(property.propertyLength)>0 && Number(property.propertyWidth)>0 ? ` • ${property.propertyLength} × ${property.propertyWidth} ${property.dimensionUnit||"Feet"}` : ""}`},
+        property.facing && !["n/a","na"].includes(String(property.facing).toLowerCase()) && {icon:Ruler,label:"Facing",value:property.facing},
+        property.bhk && !["n/a","na"].includes(String(property.bhk).toLowerCase()) && {
           icon: BedDouble,
           label: "Bedrooms",
           value: property.bhk,
@@ -1564,11 +1566,7 @@ export default function PropertyDetails() {
           label: "Bathrooms",
           value: property.bathrooms,
         },
-        property.areaValue > 0 && {
-          icon: Ruler,
-          label: "Area",
-          value: `${property.areaValue.toLocaleString("en-IN")} ${property.areaUnit}`,
-        },
+
         property.coveredParking + property.openParking > 0 && {
           icon: CarFront,
           label: "Parking",
@@ -2359,14 +2357,14 @@ export default function PropertyDetails() {
                 </div>
               ) : null}
 
-              <div className="mt-5 grid grid-cols-2 gap-2.5">
-                {quickFacts.slice(0, 4).map(({ icon: Icon, label, value }) => (
+              <div className="mt-5 flex overflow-x-auto gap-2.5 sm:grid sm:grid-cols-2">
+                {quickFacts.slice(0, 5).map(({ icon: Icon, label, value }) => (
                   <DetailBox key={label} label={label} value={value} icon={Icon} />
                 ))}
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
-                {property.facing ? (
+                {property.facing && !["n/a","na"].includes(String(property.facing).toLowerCase()) ? (
                   <span className="rounded-full border border-[#DCE8EA] bg-[#FCFEFE] px-3 py-1.5 text-[10px] font-extrabold text-[#617782]">
                     Facing {property.facing}
                   </span>

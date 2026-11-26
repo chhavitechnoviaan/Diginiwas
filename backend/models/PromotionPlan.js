@@ -5,7 +5,7 @@ const schema = new mongoose.Schema({
  targetType:{type:String,enum:["PROPERTY","PARTNER"],required:true},
  credits:{type:Number,min:0,required:true}, durationDays:{type:Number,min:1,required:true},
  placement:{type:String,enum:["BOOST","FEATURED","LOCALITY_TOP","FEATURE_BASED"],required:true},
- features:{type:[String],default:[]}, isActive:{type:Boolean,default:true}, isDeleted:{type:Boolean,default:false},
+ features:{type:[String],default:[]}, displayFeatures:{type:[String],default:[]}, isActive:{type:Boolean,default:true}, isDeleted:{type:Boolean,default:false},
  createdBy:{type:mongoose.Schema.Types.ObjectId,default:null}
 },{timestamps:true});
 export default mongoose.models.PromotionPlan || mongoose.model("PromotionPlan",schema);

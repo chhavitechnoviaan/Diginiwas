@@ -878,8 +878,7 @@ export const RESIDENTIAL_SALE_ENUMS = {
     "North East",
     "North West",
     "South East",
-    "South West",
-  ],
+    "South West", "N/A"],
 
   views: [
     "Beach View",
@@ -1023,6 +1022,10 @@ const imageSchema = new Schema(
 
 const residentialSalePropertySchema = new Schema(
   {
+    propertyLength: {type:Number,min:0,default:null},
+    propertyWidth: {type:Number,min:0,default:null},
+    dimensionUnit: {type:String,enum:["Feet","Meter"],default:"Feet"},
+
     sourceModel: { type: String, enum: ["ResidentialSaleProperty", "CommercialSaleProperty"], default: "ResidentialSaleProperty", index: true },
     title: { type: String, trim: true, maxlength: 180, default: "" },
     category: { type: String, enum: ["Sell"], default: "Sell", index: true },

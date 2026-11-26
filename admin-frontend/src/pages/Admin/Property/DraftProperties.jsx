@@ -753,7 +753,7 @@ function FullPropertyPreview({
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#3ED6AE]/40 bg-[#E9FBF6] px-5 text-sm font-bold text-[#168A70] hover:bg-[#DCF8EF]"
                 >
                   <FiEdit3 />
-                  Edit Draft
+                  Continue Editing
                 </button>
 
                 <button
@@ -996,6 +996,7 @@ export default function DraftProperties() {
                     </span>
                   </div>
 
+                  <p className="mb-2 text-xs text-slate-500">Updated: {property.updatedAt ? new Date(property.updatedAt).toLocaleDateString("en-IN") : "Not available"}</p>
                   <div className="mb-4 flex items-center justify-between">
                     <p className="text-xl font-bold text-[#1F4256]">
                       {formatPrice(property.price)}
@@ -1033,7 +1034,7 @@ export default function DraftProperties() {
                       onClick={() => navigate(`/add-property?edit=${property._id}${property.sourceModel ? `&source=${property.sourceModel}` : ""}`)}
                       className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#3ED6AE]/40 bg-[#E9FBF6] text-xs font-semibold text-[#168A70] hover:bg-[#DCF8EF]"
                     >
-                      <FiEdit3 /> Edit
+                      <FiEdit3 /> Continue Editing
                     </button>
                     <button
                       disabled={publishingId === property._id}

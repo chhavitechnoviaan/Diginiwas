@@ -200,7 +200,7 @@ const ServiceCard = ({
           </div>
         </div>
 
-        <div>
+        {product.code !== "LEAD_UNLOCK" && <div>
           <InputLabel>
             Duration
           </InputLabel>
@@ -248,7 +248,7 @@ const ServiceCard = ({
               </span>
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">

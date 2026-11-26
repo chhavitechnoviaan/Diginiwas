@@ -1561,8 +1561,7 @@ const FACINGS = [
   "North East",
   "North West",
   "South East",
-  "South West",
-];
+  "South West", "N/A"];
 const VIEWS = [
   "Beach View",
   "Garden View",
@@ -1607,6 +1606,7 @@ const IMAGE_TYPES = [
   "Other",
 ];
 const initial = {
+  propertyLength:"",propertyWidth:"",dimensionUnit:"Feet",
   title: "",
   category: "Rent",
   buildingType: "Residential",
@@ -1760,7 +1760,7 @@ export default function RentalPropertyForm({ onChangeListingType }) {
       try {
         const response = await getRentalPropertyByIdApi(editId);
         const p = response?.data || response;
-        setForm({ ...initial, title: p.title || "", propertyType: p.propertyType || "", buildingType: p.buildingType || "Residential", city: p.location?.city || "", state: p.location?.state || "", country: p.location?.country || "India", locality: p.location?.locality || "", society: p.location?.society || "", address: p.location?.address || "", pinCode: p.location?.pinCode || "", latitude: p.location?.latitude ?? "", longitude: p.location?.longitude ?? "", rentAmount: p.rent?.amount ?? "", rentFrequency: p.rent?.frequency || "Per Month", negotiable: Boolean(p.rent?.negotiable), maintenanceAmount: p.maintenance?.amount ?? "", maintenanceFrequency: p.maintenance?.frequency || "Monthly", includedInRent: Boolean(p.maintenance?.includedInRent), depositType: p.securityDeposit?.type || "Zero Deposit", depositAmount: p.securityDeposit?.amount ?? "", bhk: p.bhk || "", areaValue: p.areaDetails?.[0]?.value ?? "", areaType: p.areaDetails?.[0]?.type || "Built-up Area", areaUnit: p.areaDetails?.[0]?.unit || "Sq. Ft.", additionalSpaces: p.additionalSpaces || [], availability: p.availability?.availableFrom || "Immediately", availableDate: p.availability?.availableDate || "", suitedFor: p.suitedFor || [], furnishingStatus: p.furnishing?.status || "", furnishingItems: (p.furnishing?.items || []).map((x) => x.name), bathrooms: p.specifications?.bathrooms ?? "", coveredParking: p.specifications?.coveredParking ?? 0, openParking: p.specifications?.openParking ?? 0, powerBackup: Boolean(p.specifications?.powerBackup), waterSources: p.specifications?.waterSources || [], liftAvailable: Boolean(p.specifications?.liftAvailable), locationAdvantages: p.specifications?.locationAdvantages || [], balconies: p.specifications?.balconies ?? 0, facing: p.specifications?.facing || "", view: p.specifications?.view || "", flooring: p.specifications?.flooring || "", roadWidth: p.specifications?.connectingRoadWidth?.value ?? "", roadUnit: p.specifications?.connectingRoadWidth?.unit || "Feet", totalFloors: p.specifications?.totalFloorCount ?? "", propertyFloor: p.specifications?.propertyFloor ?? "", towerBlock: p.specifications?.towerBlock || "", unitNo: p.specifications?.unitNo || "", keepUnitNoPrivate: Boolean(p.specifications?.keepUnitNoPrivate), amenities: p.amenities || [], highlights: p.propertyHighlights || [], oneLineDescription: p.oneLineDescription || "", description: p.description || "", videoLink: p.videoLink || p.media?.videos?.[0]?.url || "", tags: Array.isArray(p.tags) ? p.tags.join(", ") : "" });
+        setForm({ ...initial, title: p.title || "", propertyType: p.propertyType || "", buildingType: p.buildingType || "Residential", city: p.location?.city || "", state: p.location?.state || "", country: p.location?.country || "India", locality: p.location?.locality || "", society: p.location?.society || "", address: p.location?.address || "", pinCode: p.location?.pinCode || "", latitude: p.location?.latitude ?? "", longitude: p.location?.longitude ?? "", rentAmount: p.rent?.amount ?? "", rentFrequency: p.rent?.frequency || "Per Month", negotiable: Boolean(p.rent?.negotiable), maintenanceAmount: p.maintenance?.amount ?? "", maintenanceFrequency: p.maintenance?.frequency || "Monthly", includedInRent: Boolean(p.maintenance?.includedInRent), depositType: p.securityDeposit?.type || "Zero Deposit", depositAmount: p.securityDeposit?.amount ?? "", bhk: p.bhk || "", propertyLength:p.propertyLength??"",propertyWidth:p.propertyWidth??"",dimensionUnit:p.dimensionUnit||"Feet",areaValue: p.areaDetails?.[0]?.value ?? "", areaType: p.areaDetails?.[0]?.type || "Built-up Area", areaUnit: p.areaDetails?.[0]?.unit || "Sq. Ft.", additionalSpaces: p.additionalSpaces || [], availability: p.availability?.availableFrom || "Immediately", availableDate: p.availability?.availableDate || "", suitedFor: p.suitedFor || [], furnishingStatus: p.furnishing?.status || "", furnishingItems: (p.furnishing?.items || []).map((x) => x.name), bathrooms: p.specifications?.bathrooms ?? "", coveredParking: p.specifications?.coveredParking ?? 0, openParking: p.specifications?.openParking ?? 0, powerBackup: Boolean(p.specifications?.powerBackup), waterSources: p.specifications?.waterSources || [], liftAvailable: Boolean(p.specifications?.liftAvailable), locationAdvantages: p.specifications?.locationAdvantages || [], balconies: p.specifications?.balconies ?? 0, facing: p.specifications?.facing || "", view: p.specifications?.view || "", flooring: p.specifications?.flooring || "", roadWidth: p.specifications?.connectingRoadWidth?.value ?? "", roadUnit: p.specifications?.connectingRoadWidth?.unit || "Feet", totalFloors: p.specifications?.totalFloorCount ?? "", propertyFloor: p.specifications?.propertyFloor ?? "", towerBlock: p.specifications?.towerBlock || "", unitNo: p.specifications?.unitNo || "", keepUnitNoPrivate: Boolean(p.specifications?.keepUnitNoPrivate), amenities: p.amenities || [], highlights: p.propertyHighlights || [], oneLineDescription: p.oneLineDescription || "", description: p.description || "", videoLink: p.videoLink || p.media?.videos?.[0]?.url || "", tags: Array.isArray(p.tags) ? p.tags.join(", ") : "" });
         setImages((p.media?.images || []).map((x) => ({ ...x, preview: x.url, file: null })));
       } catch (e) {
         await Swal.fire({ icon: "error", title: "Unable to load property", text: e?.response?.data?.message || e.message, confirmButtonColor: "#1F4256" });
@@ -1986,6 +1986,7 @@ export default function RentalPropertyForm({ onChangeListingType }) {
       amount: Number(form.depositAmount || 0),
     },
     bhk: form.bhk,
+    propertyLength:form.propertyLength===""?null:Number(form.propertyLength),propertyWidth:form.propertyWidth===""?null:Number(form.propertyWidth),dimensionUnit:form.dimensionUnit,
     areaDetails: [
       {
         value: Number(form.areaValue || 0),
@@ -2419,7 +2420,7 @@ export default function RentalPropertyForm({ onChangeListingType }) {
                     />
                   </Field>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Area Size" required error={errors.area}>
+                    <Field label="Length"><input type="number" min="0" step="any" className={input} value={form.propertyLength} onChange={e=>set("propertyLength",e.target.value)}/></Field><Field label="Width"><input type="number" min="0" step="any" className={input} value={form.propertyWidth} onChange={e=>set("propertyWidth",e.target.value)}/></Field><Field label="Dimension unit"><select className={input} value={form.dimensionUnit} onChange={e=>set("dimensionUnit",e.target.value)}><option>Feet</option><option>Meter</option></select></Field><button type="button" className="rounded border p-2" disabled={form.areaValue!==""||!(Number(form.propertyLength)>0&&Number(form.propertyWidth)>0)} onClick={()=>setForm(p=>({...p,areaValue:String(Number(p.propertyLength)*Number(p.propertyWidth)),areaUnit:p.dimensionUnit==="Meter"?"Sq. Meter":"Sq. Ft."}))}>Calculate area</button><Field label="Area Size" required error={errors.area}>
                       <input
                         type="number"
                         className={input}
@@ -2793,7 +2794,7 @@ export default function RentalPropertyForm({ onChangeListingType }) {
                     required
                     error={errors.description}
                   >
-                    <textarea
+                    <button type="button" className="mb-2 rounded border p-2" onClick={()=>set("description",[form.title,form.propertyType,form.locality,form.city].filter(Boolean).join(", ")+(Number(form.areaValue)>0?`. Area: ${form.areaValue} ${form.areaUnit}.`:"."))}>Auto Description</button><textarea
                       rows={7}
                       className={`${input} h-auto py-3`}
                       value={form.description}

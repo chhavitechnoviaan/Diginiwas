@@ -1,3 +1,6 @@
+import jwt from "jsonwebtoken";
+import { normalizePhone, phoneCandidates } from "../../utils/firebasePhoneAuth.js";
+import { comparePassword as verifyApplicationPassword } from "../../services/partnerCredentialService.js";
 import { notifyUser } from "../../services/notificationService.js";
 // import mongoose from "mongoose";
 // import Partner from "../../models/Partner.js";
@@ -844,6 +847,7 @@ export const registerPartnerApplication =
 
           data: {
             ...sanitize(partner),
+            verificationToken: onboardingToken(partner),
             phoneOtpProvider: "firebase",
             phoneOtpAction: "sendFirebasePhoneOtp",
           },
@@ -1099,10 +1103,7 @@ export const verifyPartnerEmailOtp =
         message:
           "Email verified",
 
-        data:
-          sanitize(
-            partner
-          ),
+        data: {...sanitize(partner),verificationToken:onboardingToken(partner),...onboardingData(partner)},
       });
     } catch (error) {
       return res
@@ -2127,3 +2128,8 @@ export const rejectPartnerApplication =
         });
     }
   };
+
+const onboardingToken = p => jwt.sign({sub:String(p._id),purpose:"partner-onboarding"},process.env.JWT_SECRET,{expiresIn:"24h"});
+const onboardingData = p => ({emailVerified:!!p.emailVerification?.isVerified,mobileVerified:!!p.phoneVerification?.isVerified,phone:p.phone,nextStep:!p.emailVerification?.isVerified?"EMAIL_VERIFICATION":!p.phoneVerification?.isVerified?"MOBILE_VERIFICATION":"CONTINUE_ONBOARDING",canContinueOnboarding:!!(p.emailVerification?.isVerified&&p.phoneVerification?.isVerified)});
+export async function onboardingSession(req,res){try{const p=await Partner.findById(req.params.id);if(!p||p.isDeleted||p.isRejected||p.isBlocked||!p.password||!await verifyApplicationPassword(String(req.body.password||""),p.password))return res.status(401).json({success:false,message:"Invalid credentials"});return res.json({success:true,data:{...onboardingData(p),verificationToken:onboardingToken(p)}});}catch(e){return res.status(400).json({success:false,message:"Unable to establish verification session"});}}
+export async function onboardingStatus(req,res){try{const token=jwt.verify(String(req.headers.authorization||"").replace(/^Bearer /,""),process.env.JWT_SECRET);if(token.purpose!=="partner-onboarding"||token.sub!==req.params.id)return res.status(403).json({success:false,message:"Invalid verification session"});const p=await Partner.findById(token.sub);if(!p||p.isDeleted||p.isRejected||p.isBlocked)return res.status(403).json({success:false,message:"Application unavailable"});if(req.method==="PATCH"){if(!p.emailVerification?.isVerified||p.isApproved)return res.status(409).json({success:false,message:"Mobile update not available in this onboarding state"});const phone=normalizePhone(req.body.phone);if(!/^\+[1-9]\d{7,14}$/.test(phone))return res.status(400).json({success:false,message:"Invalid mobile number"});if(await Partner.exists({_id:{$ne:p._id},phone:{$in:phoneCandidates(phone)}}))return res.status(409).json({success:false,message:"Mobile already registered"});p.phone=phone;p.firebaseUid=null;p.phoneVerification.isVerified=false;p.phoneVerification.verifiedAt=null;p.phoneVerification.otpHash=null;p.phoneVerification.expiresAt=null;p.applicationStatus="Pending_Phone_Verification";await p.save();}res.set("Cache-Control","no-store");return res.json({success:true,data:onboardingData(p)});}catch(e){return res.status(e.code===11000?409:401).json({success:false,message:"Verification session or mobile update invalid"});}}

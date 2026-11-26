@@ -1,3 +1,4 @@
+import PromotionRequest from "../../models/PromotionRequest.js";
 import Buyer from "../../models/Buyer.js";
 import NewProperty from "../../models/NewProperty.js";
 import Partner from "../../models/Partner.js";
@@ -90,19 +91,8 @@ export const getActivePromotionTransactions = async (codes) => {
 };
 
 export const getPartnerPromotionMap = async () => {
-  const txns = await getActivePromotionTransactions(PARTNER_PROMOTION_CODES);
-  const map = new Map();
-  for (const txn of txns) {
-    const id = String(txn.attributedPartnerId || txn.walletOwnerPartnerId || "");
-    if (!id) continue;
-    const current = map.get(id) || { boost: false, featured: false, localityTop: false, codes: [] };
-    if (txn.productCode === "PARTNER_BOOST") current.boost = true;
-    if (txn.productCode === "PARTNER_FEATURED") current.featured = true;
-    if (txn.productCode === "PARTNER_LOCALITY_TOP") current.localityTop = true;
-    if (!current.codes.includes(txn.productCode)) current.codes.push(txn.productCode);
-    map.set(id, current);
-  }
-  return map;
+ const requests=await PromotionRequest.find({targetType:"PARTNER",promotionType:"PARTNER_BOOST",status:"Approved",expiresAt:{$gt:new Date()}}).select("partnerMongoId").lean();
+ return new Map(requests.map(r=>[String(r.partnerMongoId),{boost:true}]));
 };
 
 export const propertyPromotionInfo = (property, now = new Date()) => {
@@ -177,9 +167,12 @@ export const rankPartners = async (items, location) => {
       const serviceLocalityMatch = (partner.location?.serviceLocalities || []).some((x) =>
         String(location.address || "").toLowerCase().includes(String(x).toLowerCase()),
       );
+      promotion.boost = Boolean(promoFromTxn.boost) && distanceKm != null && distanceKm <= 10;
+      promotion.featured=false; promotion.localityTop=false; promotion.codes=promotion.boost?["PARTNER_BOOST"]:[]; promotion.score=promotion.boost?10:0;
       return { ...partner, promotion, distanceKm, sameCity, serviceLocalityMatch };
     })
     .sort((a, b) => {
+      if (b.promotion.score !== a.promotion.score) return b.promotion.score - a.promotion.score;
       if (a.sameCity !== b.sameCity) return a.sameCity ? -1 : 1;
       if (a.serviceLocalityMatch !== b.serviceLocalityMatch) return a.serviceLocalityMatch ? -1 : 1;
       if (b.promotion.score !== a.promotion.score) return b.promotion.score - a.promotion.score;

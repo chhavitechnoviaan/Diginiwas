@@ -28,6 +28,7 @@ export const protect = async (req, res, next) => {
       process.env.JWT_SECRET
     );
 
+    if(decoded.purpose === "partner-onboarding") return res.status(401).json({success:false,message:"Verification token is not an access token"});
     req.user = {
       id:
         decoded.id ||

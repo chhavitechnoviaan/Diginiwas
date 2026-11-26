@@ -108,8 +108,7 @@ const FACINGS = [
   "North East",
   "North West",
   "South East",
-  "South West",
-];
+  "South West", "N/A"];
 const VIEWS = [
   "Beach View",
   "Garden View",
@@ -182,6 +181,7 @@ const COMMERCIAL_HIGHLIGHTS = [
 ];
 
 const initial = {
+  propertyLength:"",propertyWidth:"",dimensionUnit:"Feet",
   title: "",
   transactionType: "Resale",
   category: "Sell",
@@ -472,7 +472,7 @@ export default function SalePropertyForm({ onChangeListingType }) {
           pricePerSqFt: p.price?.pricePerSqFt ?? "",
           negotiable: Boolean(p.price?.negotiable),
           bhk: p.bhk || "",
-          areaValue: p.areaDetails?.[0]?.value ?? "",
+          propertyLength:p.propertyLength??"",propertyWidth:p.propertyWidth??"",dimensionUnit:p.dimensionUnit||"Feet",areaValue: p.areaDetails?.[0]?.value ?? "",
           areaType: p.areaDetails?.[0]?.type || "Built-up Area",
           areaUnit: p.areaDetails?.[0]?.unit || "Sq. Ft.",
           additionalSpaces: p.additionalSpaces || [],
@@ -1025,6 +1025,7 @@ export default function SalePropertyForm({ onChangeListingType }) {
           },
         }
       : {}),
+    propertyLength:form.propertyLength===""?null:Number(form.propertyLength),propertyWidth:form.propertyWidth===""?null:Number(form.propertyWidth),dimensionUnit:form.dimensionUnit,
     areaDetails: [
       {
         value: Number(form.areaValue || 1),
@@ -1518,7 +1519,7 @@ export default function SalePropertyForm({ onChangeListingType }) {
                       placeholder="Optional"
                     />
                   </Field>
-                  <Field label="Area" required error={errors.area}>
+                  <Field label="Length"><input type="number" min="0" step="any" className={input} value={form.propertyLength} onChange={e=>set("propertyLength",e.target.value)}/></Field><Field label="Width"><input type="number" min="0" step="any" className={input} value={form.propertyWidth} onChange={e=>set("propertyWidth",e.target.value)}/></Field><Field label="Dimension unit"><select className={input} value={form.dimensionUnit} onChange={e=>set("dimensionUnit",e.target.value)}><option>Feet</option><option>Meter</option></select></Field><button type="button" className="rounded border p-2" disabled={form.areaValue!==""||!(Number(form.propertyLength)>0&&Number(form.propertyWidth)>0)} onClick={()=>setForm(p=>({...p,areaValue:String(Number(p.propertyLength)*Number(p.propertyWidth)),areaUnit:p.dimensionUnit==="Meter"?"Sq. Meter":"Sq. Ft."}))}>Calculate area</button><Field label="Area" required error={errors.area}>
                     <div className="grid grid-cols-3 gap-3">
                       <input
                         className={`${input} col-span-1`}
@@ -2023,13 +2024,13 @@ export default function SalePropertyForm({ onChangeListingType }) {
                       options={VIEWS}
                     />
                   </Field>
-                  <Field label="Flooring">
+                  {!isCommercial && <Field label="Flooring">
                     <Select
                       value={form.flooring}
                       onChange={(v) => set("flooring", v)}
                       options={FLOORING}
                     />
-                  </Field>
+                  </Field>}
                   <Field label="Total Floors">
                     <input
                       className={input}
@@ -2377,7 +2378,7 @@ export default function SalePropertyForm({ onChangeListingType }) {
                     required
                     error={errors.description}
                   >
-                    <textarea
+                    <button type="button" className="mb-2 rounded border p-2" onClick={()=>set("description",[form.title,form.propertyType,form.locality,form.city].filter(Boolean).join(", ")+(Number(form.areaValue)>0?`. Area: ${form.areaValue} ${form.areaUnit}.`:"."))}>Auto Description</button><textarea
                       className={textarea}
                       value={form.description}
                       onChange={(e) => set("description", e.target.value)}

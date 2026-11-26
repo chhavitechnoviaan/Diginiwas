@@ -38,7 +38,7 @@ export const COMMERCIAL_RENTAL_ENUMS = {
     "Safe & Secure Locality", "Near Reputed Hospital", "Close to Shopping Mall/Market",
     "Highway/Expressway Access", "Near IT Park/Business Hub", "Close to Railway Station",
   ],
-  facings: ["East", "West", "North", "South", "North East", "North West", "South East", "South West"],
+  facings: ["East", "West", "North", "South", "North East", "North West", "South East", "South West", "N/A"],
   views: ["Beach View", "Garden View", "Golf Course", "Lake View", "Park View", "Road View", "Community View", "Pool View", "Creek View", "Sea View"],
   flooring: ["Marble", "Concrete", "Cemented", "Carpeted", "Wooden", "Vitrified Tiles", "Wooden Tiles", "Imported Tiles", "Indian Tiles", "Ceramic", "Hardwood", "Carpet", "Others"],
   amenities: [
@@ -86,6 +86,10 @@ const fileMetaSchema = new Schema({
 }, { _id: false });
 
 const commercialRentalPropertySchema = new Schema({
+    propertyLength: {type:Number,min:0,default:null},
+    propertyWidth: {type:Number,min:0,default:null},
+    dimensionUnit: {type:String,enum:["Feet","Meter"],default:"Feet"},
+
   sourceModel: { type: String, enum: ["RentalProperty", "CommercialRentalProperty"], default: "CommercialRentalProperty", index: true },
   propertyId: { type: String, unique: true, sparse: true, index: true },
   title: { type: String, required: true, trim: true, maxlength: 180 },
