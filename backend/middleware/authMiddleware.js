@@ -1,4 +1,6 @@
 import jwt from "jsonwebtoken";
+import Partner from "../models/Partner.js";
+import {subAgentLoginState} from "../services/subAgentLoginPolicy.js";
 import { assertAccountActive } from "../services/accountDeletionService.js";
 
 export const protect = async (req, res, next) => {
@@ -67,6 +69,7 @@ export const protect = async (req, res, next) => {
       throw accountError;
     }
 
+    if (["agent","team_manager","partner"].includes(req.user.role)) { const p=await Partner.findById(req.user.id); if(p?.accountType==="subagent" && await subAgentLoginState(p)!=="ACTIVE") return res.status(403).json({success:false,code:"SUBAGENT_ACCESS_PENDING",message:"Sub-Agent operational access unavailable"}); }
     next();
   } catch (error) {
     console.error(

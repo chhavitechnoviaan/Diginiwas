@@ -1,5 +1,6 @@
 // import mongoose from "mongoose";
 // import Partner from "../../models/Partner.js";
+import {normalizePhone,phoneCandidates} from "../../utils/firebasePhoneAuth.js";
 // import TeamWallet from "../../models/TeamWallet.js";
 // import CreditTransaction from "../../models/CreditTransaction.js";
 import Property from "../../models/NewProperty.js";
@@ -111,6 +112,7 @@ const generatePartnerId = () =>
 export const getTeamPartners = async (req, res) => {
   try {
     const owners = await Partner.find({
+      ...(req.user.role === "admin" ? {} : {_id:req.user.id}),
       accountType: "team",
       isSubPartner: false,
       isApproved: true,
@@ -130,7 +132,7 @@ export const getTeamPartners = async (req, res) => {
             parentPartnerId: owner._id,
             accountType: "subagent",
             isSubPartner: true,
-            isApproved: true,
+            isDeleted: { $ne: true },
           })
             .select(SAFE)
             .sort({ createdAt: -1 })
@@ -246,10 +248,11 @@ export const addTeamMember = async (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedPhone = String(phone).trim();
+    const normalizedPhone = normalizePhone(phone);
+    if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) return res.status(400).json({success:false,message:"Invalid mobile number"});
 
     const duplicate = await Partner.findOne({
-      $or: [{ email: normalizedEmail }, { phone: normalizedPhone }],
+      $or: [{ email: normalizedEmail }, { phone: { $in: phoneCandidates(normalizedPhone) } }],
     });
 
     if (duplicate) {
@@ -260,7 +263,6 @@ export const addTeamMember = async (req, res) => {
     }
 
     const emailOtp = generateOtp();
-    const phoneOtp = generateOtp();
 
     const member = await Partner.create({
       partnerId: generatePartnerId(),
@@ -311,8 +313,8 @@ export const addTeamMember = async (req, res) => {
 
       phoneVerification: {
         isVerified: false,
-        otpHash: hashOtp(phoneOtp),
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        otpHash: null,
+        expiresAt: null,
       },
 
       applicationStatus: "Pending_Email_Verification",
@@ -360,7 +362,7 @@ export const addTeamMember = async (req, res) => {
 
     await Promise.all([
       sendEmailOtp({ to: member.email, name: member.name, otp: emailOtp }),
-      sendMobileOtp({ phone: member.phone, otp: phoneOtp }),
+
     ]);
 
     return res.status(201).json({

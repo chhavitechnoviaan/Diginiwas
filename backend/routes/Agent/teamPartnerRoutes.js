@@ -23,6 +23,8 @@ import {
 import { protect } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
+router.use(protect, (req,res,next)=> { if (["admin","agency_owner"].includes(req.user.role)) return next(); return res.status(403).json({success:false,message:"Team Owner or Admin required"}); });
+router.param("ownerId",(req,res,next,id)=> {if(req.user.role==="admin" || String(req.user.id)===id) return next(); return res.status(403).json({success:false,message:"Access to another agency denied"});});
 
 router.get("/", protect, getTeamPartners);
 router.post("/:ownerId/members", protect, addTeamMember);

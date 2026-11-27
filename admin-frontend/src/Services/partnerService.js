@@ -512,3 +512,5 @@ export const removeSubAgentPropertyDelegationApi = async (
   );
   return res.data;
 };
+
+export const retrySubAgentWelcomeApi = async id => (await axios.post(`${API_BASE_URL}/partner-applications/${id}/retry-welcome`, {}, config())).data;

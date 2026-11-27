@@ -3333,11 +3333,11 @@ const resolveAssignedPartner = (
         null,
 
       partnerId:
+        direct?.partnerId?.partnerId ||
         direct?.partnerCode ||
-        direct?.code ||
-        (typeof direct?.partnerId === "string"
+        (typeof direct?.partnerId === "string" && !/^[a-f0-9]{24}$/i.test(direct.partnerId)
           ? direct.partnerId
-          : direct?.partnerId?.partnerId) ||
+          : "") ||
         "",
 
       name:

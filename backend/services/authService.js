@@ -375,7 +375,7 @@ const userData = {
         await generateUniqueId(
           Partner,
           "partnerId",
-          "PTR-"
+          "PRT-"
         );
 
       userData.partnerType =
@@ -493,6 +493,7 @@ const userData = {
     }
 
     if (normalizedRole === "partner") {
+      if (user.accountType === "subagent") { const e=new Error("Use Firebase phone login for Sub-Agent"); e.code="FIREBASE_OTP_REQUIRED"; throw e; }
       if (!user.isApproved) {
         throw new Error("Partner account is waiting for DigiNiwas Admin approval");
       }
@@ -630,6 +631,7 @@ return {
       if (user.accountStatus !== "ACTIVE") throw new Error(`Seller account is ${user.accountStatus}`);
     }
     if (normalizedRole === "partner") {
+      if (user.accountType === "subagent") { const e=new Error("Use Firebase phone login for Sub-Agent"); e.code="FIREBASE_OTP_REQUIRED"; throw e; }
       if (!user.isApproved) throw new Error("Partner account is waiting for DigiNiwas Admin approval");
       if (user.isRejected || user.isBlocked || user.applicationStatus === "Suspended") throw new Error("Partner account is not active");
     }

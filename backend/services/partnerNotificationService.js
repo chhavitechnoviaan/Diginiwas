@@ -40,3 +40,9 @@ export const sendPartnerCredentials = async ({ to, name }) => {
 export const sendMobileOtp = async ({ phone, otp, name = "Partner" }) => {
   return sendMsg91FlowOtp({ phone, otp, name });
 };
+
+export const sendSubAgentWelcome = async ({to,name}) => {
+  if (!process.env.SMTP_HOST) throw new Error("SMTP not configured");
+  const result = await transporter().sendMail({from:process.env.MAIL_FROM || process.env.SMTP_USER,to,subject:"DigiNiwas - Sub-Agent account created successfully",text:`Hi ${name}, your Sub-Agent account has been approved. Open the DigiNiwas Partner app and sign in using SMS OTP on your registered mobile number. Operational access requires final Admin verification. Never share your OTP. Team DigiNiwas`});
+  if (!result.accepted?.length) throw new Error("Welcome email not accepted by SMTP");
+};

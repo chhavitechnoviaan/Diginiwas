@@ -5,6 +5,7 @@
 // import jwt from "jsonwebtoken";
 // import { normalizePhone, phoneCandidates, verifyFirebasePhoneIdToken, assertSamePhone } from "../utils/firebasePhoneAuth.js";
 
+import {subAgentLoginState} from "../services/subAgentLoginPolicy.js";
 // const isBuyerRole = (role) =>
 //   ["buyer", "tenant"].includes(
 //     String(role || "").trim().toLowerCase()
@@ -152,7 +153,8 @@
 //       });
 //     }
 
-//     const result = await authService.sendOTP({
+//     if (String(role).toLowerCase() === "partner" && req.body.provider === "firebase") return checkFirebasePhoneAccount(req,res);
+//    const result = await authService.sendOTP({
 //       phone,
 //       role,
 //     });
@@ -959,6 +961,7 @@ export const sendOTP = async (req, res) => {
       });
     }
 
+    if (String(role).toLowerCase() === "partner" && req.body.provider === "firebase") return checkFirebasePhoneAccount(req,res);
     const result = await authService.sendOTP({
       phone,
       role,
@@ -1008,6 +1011,11 @@ export const checkFirebasePhoneAccount = async (req, res) => {
     if (role === "partner") account = await Partner.findOne({ phone: { $in: candidates } });
     if (!account || account.isDeleted) {
       return res.status(404).json({ success: false, code: "ACCOUNT_NOT_FOUND", accountExists: false, message: "No account exists with this number. Please register." });
+    }
+    if(role === "partner" && account.accountType === "subagent") {
+      const status=await subAgentLoginState(account);
+      const canLogin=["ACTIVE","FINAL_VERIFICATION_PENDING"].includes(status);
+      return res.status(200).json({success:true,accountExists:true,role,phone,accountStatus:status,canLogin,provider:"firebase",partnerAccountType:"subagent",message:canLogin?"Continue with Firebase SMS OTP":"Sub-Agent login unavailable"});
     }
     const status = role === "seller"
       ? String(account.accountStatus || "PENDING").toUpperCase()
@@ -1473,6 +1481,16 @@ if (requestedRole === "buyer") {
         });
       }
 
+      if(partner.accountType === "subagent") {
+        const status=await subAgentLoginState(partner);
+        if(!["ACTIVE","FINAL_VERIFICATION_PENDING"].includes(status)) return res.status(403).json({success:false,code:status,message:"Sub-Agent login unavailable"});
+        if(decoded.firebase?.sign_in_provider !== "phone") return res.status(401).json({success:false,code:"PHONE_AUTH_REQUIRED",message:"Firebase phone sign-in required"});
+        if(partner.firebaseUid && partner.firebaseUid!==firebaseUid) return res.status(409).json({success:false,code:"FIREBASE_UID_ACCOUNT_CONFLICT",message:"Contact Admin to correct Firebase mapping"});
+        partner.firebaseUid=firebaseUid; partner.credentials.lastLoginAt=new Date(); partner.credentials.mustChangePassword=false; await partner.save();
+        const active=status==="ACTIVE";
+        const token=active?jwt.sign({id:partner._id,userId:partner._id,role:partner.role,accountType:"subagent",partnerId:partner.partnerId,parentPartnerId:partner.parentPartnerId},process.env.JWT_SECRET,{expiresIn:"7d"}):null;
+        return res.json({success:true,message:active?"Sub-Agent login successful":"OTP verified; final Admin verification pending",token,mustChangePassword:false,accountStatus:status,nextStep:active?"DASHBOARD":"WAIT_FOR_FINAL_VERIFICATION",data:{id:partner._id,_id:partner._id,partnerMongoId:partner._id,partnerId:partner.partnerId,name:partner.name,email:partner.email,phone:partner.phone,role:partner.role,accountType:"subagent",partnerAccountType:"subagent",teamRole:partner.teamRole,parentPartnerId:partner.parentPartnerId,isApproved:partner.isApproved,isVerified:partner.isVerified,permissions:partner.permissions,teamCreditAllocation:partner.teamCreditAllocation}});
+      }
       // Partner must be approved and verified before login.
       if (!partner.isApproved || !partner.isVerified) {
         return res.status(403).json({
@@ -1542,6 +1560,7 @@ if (requestedRole === "buyer") {
           id: partner._id,
 
           role: partnerRole,
+          partnerId: partner.partnerId,
 
           accountType: "partner",
         },
@@ -1562,6 +1581,8 @@ if (requestedRole === "buyer") {
         data: {
           id:
             partner._id,
+          _id: partner._id,
+          partnerMongoId: partner._id,
 
           partnerId:
             partner.partnerId || null,

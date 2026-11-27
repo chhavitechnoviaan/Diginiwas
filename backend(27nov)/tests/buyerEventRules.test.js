@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {buyerEvents} from '../services/buyerEventRules.js';
+const insert={operationType:'insert'}, update=updatedFields=>({operationType:'update',updateDescription:{updatedFields}});
+test('welcome only on insert',()=>assert.equal(buyerEvents('Buyer',{},insert)[0].type,'BUYER_WELCOME'));
+test('password never exposed',()=>assert.ok(!JSON.stringify(buyerEvents('Buyer',{},update({password:'secret'}))).includes('secret')));
+test('lead internal credit update silent',()=>assert.equal(buyerEvents('Lead',{},update({credits:5})).length,0));
+test('existing visit approval not duplicated',()=>assert.equal(buyerEvents('Visit',{status:'Upcoming'},update({status:'Upcoming',approvalStatus:'Approved'})).length,0));
+test('saved price update',()=>assert.equal(buyerEvents('NewProperty',{status:'Live',price:500},update({price:500}))[0].type,'SAVED_PROPERTY_PRICE_CHANGED'));
+test('support confirmation',()=>assert.equal(buyerEvents('SupportQuery',{},insert)[0].type,'BUYER_SUPPORT_SUBMITTED'));

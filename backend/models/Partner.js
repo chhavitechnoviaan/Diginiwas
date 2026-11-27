@@ -225,6 +225,7 @@ password: {
     },
 
     credentials: {
+      subAgentWelcomeSentAt: { type: Date, default: null },
       temporaryPasswordIssued: { type: Boolean, default: false },
       temporaryPasswordIssuedAt: { type: Date, default: null },
       temporaryPasswordExpiresAt: { type: Date, default: null },

@@ -16,6 +16,7 @@ import { notifyUser } from "../../services/notificationService.js";
 //   sendEmailOtp,
 //   sendMobileOtp,
 //   sendPartnerCredentials,
+//  sendSubAgentWelcome,
 // } from "../../services/partnerNotificationService.js";
 
 // const generatePartnerId = () =>
@@ -518,6 +519,7 @@ import {
 import {
   sendEmailOtp,
   sendPartnerCredentials,
+  sendSubAgentWelcome,
 } from "../../services/partnerNotificationService.js";
 import { verifyFirebasePhoneIdToken, assertSamePhone } from "../../utils/firebasePhoneAuth.js";
 import { notifyAdmins } from "../../services/adminNotificationService.js";
@@ -1129,11 +1131,12 @@ export const verifyPartnerPhoneOtp = async (req, res) => {
   try {
     const partner = await Partner.findById(req.params.id);
     if (!partner) return res.status(404).json({ success: false, message: "Application not found" });
-    if (partner.phoneVerification?.isVerified) return res.json({ success: true, message: "Mobile already verified", data: sanitize(partner) });
+    if (partner.phoneVerification?.isVerified && partner.accountType !== "subagent") return res.json({ success: true, message: "Mobile already verified", data: sanitize(partner) });
     const { idToken } = req.body || {};
     if (!idToken) return res.status(400).json({ success: false, message: "Firebase ID token is required." });
-    const { phone, uid } = await verifyFirebasePhoneIdToken(idToken);
+    const { phone, uid, decoded } = await verifyFirebasePhoneIdToken(idToken);
     assertSamePhone(partner.phone, phone);
+    if(partner.accountType === "subagent") { if(decoded.firebase?.sign_in_provider !== "phone") return res.status(401).json({success:false,message:"Firebase phone sign-in required"}); if(partner.phoneVerification?.isVerified) return res.json({success:true,message:"Mobile already verified",data:{applicationStatus:partner.applicationStatus}}); if(!partner.emailVerification?.isVerified || partner.isApproved || partner.isRejected || partner.isBlocked || partner.isDeleted) return res.status(409).json({success:false,message:"Email verification or application state invalid"}); }
     partner.firebaseUid = uid;
     partner.phone = phone;
     partner.phoneVerification.isVerified = true;
@@ -1460,12 +1463,10 @@ export const approvePartnerApplication =
           // --------------------------------------------
 
           const temp =
-            generateNameBasedTemporaryPassword(partner.name);
+            partner.accountType === "subagent" ? null : generateNameBasedTemporaryPassword(partner.name);
 
           partner.password =
-            await hashPassword(
-              temp
-            );
+            temp ? await hashPassword(temp) : "";
 
           partner.isApproved =
             true;
@@ -1503,7 +1504,8 @@ export const approvePartnerApplication =
             );
 
           partner.credentials.mustChangePassword =
-            true;
+            Boolean(temp);
+          if (!temp) { partner.credentials.temporaryPasswordIssued = false; partner.credentials.temporaryPasswordIssuedAt = null; partner.credentials.temporaryPasswordExpiresAt = null; partner.credentials.subAgentWelcomeSentAt = null; }
 
           // --------------------------------------------
           // ALL PERMISSIONS FALSE UNTIL FINAL VERIFY
@@ -1616,30 +1618,16 @@ export const approvePartnerApplication =
       // SEND LOGIN CREDENTIALS
       // --------------------------------------------
 
-      await sendPartnerCredentials(
-        {
-          to:
-            result
-              .partner
-              .email,
-
-          name:
-            result
-              .partner
-              .name,
-
-          partnerId:
-            result
-              .partner
-              .partnerId,
-
-          temporaryPassword:
-            result.temp,
-        }
-      );
+      if (result.partner.accountType === "subagent") {
+        try { await deliverSubAgentWelcome(result.partner); }
+        catch (error) { return res.status(200).json({success:true,message:"Sub-Agent approved; welcome email pending. Retry email before OTP login.",emailSent:false,data:sanitize(result.partner)}); }
+      } else {
+        await sendPartnerCredentials({to:result.partner.email,name:result.partner.name,partnerId:result.partner.partnerId,temporaryPassword:result.temp});
+      }
 
       return res.json({
         success: true,
+        ...(result.partner.accountType === "subagent" ? {emailSent:true} : {}),
 
         message:
           result.partner
@@ -2133,3 +2121,15 @@ const onboardingToken = p => jwt.sign({sub:String(p._id),purpose:"partner-onboar
 const onboardingData = p => ({emailVerified:!!p.emailVerification?.isVerified,mobileVerified:!!p.phoneVerification?.isVerified,phone:p.phone,nextStep:!p.emailVerification?.isVerified?"EMAIL_VERIFICATION":!p.phoneVerification?.isVerified?"MOBILE_VERIFICATION":"CONTINUE_ONBOARDING",canContinueOnboarding:!!(p.emailVerification?.isVerified&&p.phoneVerification?.isVerified)});
 export async function onboardingSession(req,res){try{const p=await Partner.findById(req.params.id);if(!p||p.isDeleted||p.isRejected||p.isBlocked||!p.password||!await verifyApplicationPassword(String(req.body.password||""),p.password))return res.status(401).json({success:false,message:"Invalid credentials"});return res.json({success:true,data:{...onboardingData(p),verificationToken:onboardingToken(p)}});}catch(e){return res.status(400).json({success:false,message:"Unable to establish verification session"});}}
 export async function onboardingStatus(req,res){try{const token=jwt.verify(String(req.headers.authorization||"").replace(/^Bearer /,""),process.env.JWT_SECRET);if(token.purpose!=="partner-onboarding"||token.sub!==req.params.id)return res.status(403).json({success:false,message:"Invalid verification session"});const p=await Partner.findById(token.sub);if(!p||p.isDeleted||p.isRejected||p.isBlocked)return res.status(403).json({success:false,message:"Application unavailable"});if(req.method==="PATCH"){if(!p.emailVerification?.isVerified||p.isApproved)return res.status(409).json({success:false,message:"Mobile update not available in this onboarding state"});const phone=normalizePhone(req.body.phone);if(!/^\+[1-9]\d{7,14}$/.test(phone))return res.status(400).json({success:false,message:"Invalid mobile number"});if(await Partner.exists({_id:{$ne:p._id},phone:{$in:phoneCandidates(phone)}}))return res.status(409).json({success:false,message:"Mobile already registered"});p.phone=phone;p.firebaseUid=null;p.phoneVerification.isVerified=false;p.phoneVerification.verifiedAt=null;p.phoneVerification.otpHash=null;p.phoneVerification.expiresAt=null;p.applicationStatus="Pending_Phone_Verification";await p.save();}res.set("Cache-Control","no-store");return res.json({success:true,data:onboardingData(p)});}catch(e){return res.status(e.code===11000?409:401).json({success:false,message:"Verification session or mobile update invalid"});}}
+
+async function deliverSubAgentWelcome(p) {
+  await sendSubAgentWelcome({to:p.email,name:p.name});
+  await Partner.updateOne({_id:p._id},{$set:{"credentials.subAgentWelcomeSentAt":new Date(),"credentials.mustChangePassword":false,"credentials.temporaryPasswordIssued":false,"credentials.temporaryPasswordExpiresAt":null,"credentials.temporaryPasswordIssuedAt":null,password:""}});
+  p.credentials.subAgentWelcomeSentAt = new Date();
+}
+export async function retrySubAgentWelcome(req,res) {
+  try { const p=await Partner.findById(req.params.id); if(!p || p.accountType!=="subagent" || !p.isApproved || p.isDeleted || p.isBlocked || p.isRejected) return res.status(409).json({success:false,message:"Approved active Sub-Agent required"});
+  if(!p.credentials?.subAgentWelcomeSentAt) await deliverSubAgentWelcome(p);
+  return res.json({success:true,emailSent:true,message:"Welcome email accepted by SMTP"});
+  } catch(e) {return res.status(503).json({success:false,message:"Welcome email could not be sent; retry later"});}
+}

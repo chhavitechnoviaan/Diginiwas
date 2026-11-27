@@ -67,6 +67,7 @@ export const partnerLogin = async (req, res) => {
       });
     }
 
+    if (partner.accountType === "subagent") return res.status(403).json({success:false,code:"FIREBASE_OTP_REQUIRED",message:"Use registered mobile SMS OTP"});
     if (partner.isDeleted) {
       return res.status(403).json({
         success: false,
@@ -120,6 +121,8 @@ export const partnerLogin = async (req, res) => {
       mustChangePassword: Boolean(partner.credentials?.mustChangePassword),
       data: {
         _id: partner._id,
+        id: partner._id,
+        partnerMongoId: partner._id,
         partnerId: partner.partnerId,
         name: partner.name,
         email: partner.email,
@@ -188,4 +191,14 @@ export const changePartnerPassword = async (req, res) => {
       error: error.message,
     });
   }
+};
+
+// Canonical identity for the authenticated Partner; never generate a new ID here.
+export const getPartnerIdentity = async (req, res) => {
+  try {
+    if (!["partner", "agent", "agency_owner", "team_manager"].includes(req.user?.role)) return res.status(403).json({success:false,message:"Partner access required"});
+    const p = await Partner.findOne({_id:req.user.id,isDeleted:{$ne:true}}).select("partnerId name accountType role").lean();
+    if (!p) return res.status(404).json({success:false,message:"Partner not found"});
+    return res.json({success:true,data:{id:p._id,_id:p._id,partnerMongoId:p._id,partnerId:p.partnerId || null,name:p.name,accountType:p.accountType,role:p.role}});
+  } catch (error) { return res.status(500).json({success:false,message:"Unable to fetch Partner identity"}); }
 };

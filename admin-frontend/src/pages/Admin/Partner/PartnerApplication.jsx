@@ -15,6 +15,7 @@
 //   getPartnerApplicationsApi,
 //   getPartnerApplicationByIdApi,
 //   approvePartnerApplicationApi,
+//   retrySubAgentWelcomeApi,
 //   verifyApprovedPartnerApi,
 //   actionRequiredPartnerApi,
 //   rejectPartnerApplicationApi,
@@ -143,7 +144,7 @@
 //       title: "Approve Partner?",
 //       text:
 //         partner.accountType === "subagent"
-//           ? "Approve this Sub Agent application?"
+//           ? "Approve this Sub-Agent and send the OTP login welcome email?"
 //           : "Temporary credentials will be generated and emailed.",
 //       icon: "question",
 //       showCancelButton: true,
@@ -156,7 +157,7 @@
 //     try {
 //       setActionLoading(true);
 
-//       await approvePartnerApplicationApi(
+//       const approval = await approvePartnerApplicationApi(
 //         partner._id,
 //         {
 //           remarks:
@@ -167,7 +168,7 @@
 //       await Swal.fire(
 //         "Approved",
 //         partner.accountType === "subagent"
-//           ? "Sub Agent application approved successfully."
+//           ? (approval.emailSent === false ? "Approved; welcome email failed. Use Retry Welcome Email before OTP login." : "Approved. Welcome email sent; SMS OTP login enabled.")
 //           : "Credentials sent to registered email.",
 //         "success"
 //       );
@@ -1064,7 +1065,7 @@
 //                   </>
 //                 )}
 
-//                 {/* FINAL VERIFY */}
+// //                 {/* FINAL VERIFY */}
 
 //                 {selected.applicationStatus ===
 //                   "Approved_Not_Verified" && (
@@ -1163,6 +1164,7 @@ import {
   getPartnerApplicationsApi,
   getPartnerApplicationByIdApi,
   approvePartnerApplicationApi,
+  retrySubAgentWelcomeApi,
   verifyApprovedPartnerApi,
   actionRequiredPartnerApi,
   rejectPartnerApplicationApi,
@@ -1308,7 +1310,7 @@ export default function PartnerApplications({ initialApplicationId = null }) {
       title: "Approve Partner?",
       text:
         partner.accountType === "subagent"
-          ? "Approve this Sub Agent application?"
+          ? "Approve this Sub-Agent and send the OTP login welcome email?"
           : "Temporary credentials will be generated and emailed.",
       icon: "question",
       showCancelButton: true,
@@ -1321,7 +1323,7 @@ export default function PartnerApplications({ initialApplicationId = null }) {
     try {
       setActionLoading(true);
 
-      await approvePartnerApplicationApi(
+      const approval = await approvePartnerApplicationApi(
         partner._id,
         {
           remarks:
@@ -1332,7 +1334,7 @@ export default function PartnerApplications({ initialApplicationId = null }) {
       await Swal.fire(
         "Approved",
         partner.accountType === "subagent"
-          ? "Sub Agent application approved successfully."
+          ? (approval.emailSent === false ? "Approved; welcome email failed. Use Retry Welcome Email before OTP login." : "Approved. Welcome email sent; SMS OTP login enabled.")
           : "Credentials sent to registered email.",
         "success"
       );
@@ -2284,6 +2286,9 @@ export default function PartnerApplications({ initialApplicationId = null }) {
                   </>
                 )}
 
+                {selected.accountType === "subagent" && selected.isApproved && !selected.credentials?.subAgentWelcomeSentAt && (
+                  <button disabled={actionLoading} className="rounded-xl bg-amber-100 px-4 py-2 text-xs font-bold" onClick={async()=>{setActionLoading(true);try{await retrySubAgentWelcomeApi(selected._id);await Swal.fire("Email sent","OTP login is enabled subject to account status.","success");setSelected(null);await load();}catch(e){await Swal.fire("Email failed",e.response?.data?.message || "Retry later","error");}finally{setActionLoading(false);}}}>Retry Welcome Email</button>
+                )}
                 {/* FINAL VERIFY */}
 
                 {selected.applicationStatus ===
